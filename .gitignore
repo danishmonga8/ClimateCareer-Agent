@@ -32,4 +32,4 @@ Thumbs.db
 
 # Application-generated data
 data/generated/
-logs/
+logs/.ruff_cache/
