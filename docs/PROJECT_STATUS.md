@@ -7,6 +7,7 @@
 - Phase 3: Job Discovery completed.
 - Phase 4: Human Approval Dashboard completed.
 - Phase 5: Privacy-Safe End-to-End Verification and Integration Hardening completed.
+- Phase 6: LangGraph Workflow Orchestration completed.
 
 ## Phase 3 delivery
 
@@ -71,8 +72,37 @@
 
 None identified during the Phase 3 checkpoint validation.
 
-## Phase 6 starting point
+## Phase 6 delivery
 
-Begin Phase 6 with LangGraph workflow orchestration, the next unfinished item
-in the existing project roadmap. Preserve the Phase 5 local-only,
+- Added LangGraph 1.2-compatible local orchestration with typed,
+  reference-only state and only internal workflow stages.
+- Added a genuine LangGraph human-review interruption and validated atomic JSON
+  snapshots for process-restart recovery; snapshots supplement the existing
+  Phase 1-5 repositories and dashboard audit trail.
+- Reused existing artifact loaders, application-review transition, dashboard
+  decision service, optimistic revisions, and append-only audit persistence.
+- Added dashboard visibility for a matching local workflow stage. Streamlit
+  rendering does not invoke graph preparation or model-related nodes.
+- Legacy checkpoints containing external-action stages fail closed with a
+  sanitized incompatibility message.
+
+## Phase 6 known limitations
+
+- The installed LangGraph distribution supplies an in-memory live checkpointer,
+  so local JSON snapshots provide restart recovery rather than a shared backend.
+- Workflow preparation loads existing artifacts by default; generation remains
+  an explicit, injectable operation outside dashboard render cycles.
+
+## Phase 6 final validation
+
+- Focused workflow, dashboard, and Phase 1-5 regression tests: passed.
+- Complete test suite: 140 passed.
+- Ruff and formatting checks: passed.
+- No API credit, live job-board request, browser action, email, upload, or
+  application submission was used.
+
+## Phase 7 starting point
+
+Begin Phase 7 with additional quality-control and approval commands, the next
+unfinished item in the existing roadmap. Preserve the local-only,
 human-approval, and no-submission boundaries.

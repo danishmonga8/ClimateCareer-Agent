@@ -29,6 +29,7 @@ from app.services.dashboard_review_service import (
     apply_dashboard_decision,
     resubmit_for_review,
 )
+from app.workflows.repository import find_workflow_for_job
 
 st.set_page_config(page_title="Human Approval Dashboard", page_icon="✓", layout="wide")
 
@@ -166,6 +167,14 @@ def _confirm_decision(
 def _render_controls(workspace_path: Path, view: DashboardJobView) -> None:
     st.subheader("Internal decision")
     st.caption("Approval is for a manual next step only; it is not an application submission.")
+    workflow = find_workflow_for_job(
+        view.record.job_key,
+        workspace_path.parent / "workflow_checkpoints",
+    )
+    if workflow is not None:
+        st.caption(f"Workflow stage: {workflow['stage'].value.replace('_', ' ')}")
+        if workflow["stage"].value == "recoverable_failure":
+            st.warning("Workflow recovery is required before another internal decision.")
     if view.record.status == DashboardReviewStatus.REVISION_REQUESTED:
         if st.button("Mark revision ready for review", key=f"resubmit-{view.record.job_key}"):
             _confirm_decision(workspace_path, view, None)

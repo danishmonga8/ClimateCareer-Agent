@@ -412,6 +412,28 @@ review items remain unresolved. The dashboard never submits an application,
 opens an Apply flow, sends messages, logs in, starts browser automation, or
 changes any external service.
 
+## Phase 6: Local LangGraph orchestration
+
+Phase 6 coordinates existing validated artifacts through a local LangGraph flow:
+
+```text
+input validation -> job processing -> scoring -> personalization -> human review interrupt
+                                                                    -> approved for manual next step
+                                                                    -> revision requested
+                                                                    -> rejected
+```
+
+The graph state and restart-safe JSON checkpoint contain artifact references,
+stable job identity, review revision, internal stage, timestamps, and sanitized
+warnings only. They do not duplicate candidate or application content. Live
+interrupts use LangGraph's local in-memory checkpointer; an atomic JSON snapshot
+under `workflow_checkpoints/` enables a later local resume after restart.
+
+The dashboard displays a matching local workflow stage when a checkpoint is
+available. Streamlit refreshes never start graph nodes automatically. This
+orchestration records internal approval only: it has no submission node,
+external-action route, browser action, upload, email, or autofill capability.
+
 ## Quality checks
 
 ### Lint

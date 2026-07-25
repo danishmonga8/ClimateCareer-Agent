@@ -1,94 +1,115 @@
-"""Shared workflow state for the ClimateCareer-Agent LangGraph."""
+"""Typed, internal-only state for the LangGraph review workflow."""
 
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TypedDict
 from uuid import uuid4
 
-from app.models.candidate import CandidateProfile
-from app.models.job import JobDescription
-from app.models.scoring import JobRelevanceScore
-
 
 class WorkflowStage(StrEnum):
-    """Current stage of an application workflow."""
+    """Stages that never represent an external action."""
 
-    CREATED = "created"
-    CANDIDATE_PROFILE_READY = "candidate_profile_ready"
-    JOB_PARSED = "job_parsed"
-    ELIGIBILITY_CHECKED = "eligibility_checked"
-    SCORED = "scored"
-    SHORTLISTED = "shortlisted"
+    INPUT_VALIDATION = "input_validation"
+    JOB_PROCESSING = "job_processing"
+    SCORING = "scoring"
     PERSONALIZATION = "personalization"
-    QUALITY_REVIEW = "quality_review"
-    AWAITING_APPROVAL = "awaiting_approval"
-    READY_FOR_AUTOFILL = "ready_for_autofill"
-    AUTOFILLED = "autofilled"
-    APPLIED = "applied"
+    AWAITING_HUMAN_REVIEW = "awaiting_human_review"
+    REVISION_REQUESTED = "revision_requested"
+    APPROVED_FOR_MANUAL_NEXT_STEP = "approved_for_manual_next_step"
     REJECTED = "rejected"
-    ARCHIVED = "archived"
+    RECOVERABLE_FAILURE = "recoverable_failure"
     FAILED = "failed"
 
 
-class ApprovalStatus(StrEnum):
-    """Human approval status for controlled actions."""
+class WorkflowDecision(StrEnum):
+    """Explicit internal decisions accepted at the human-review checkpoint."""
 
-    NOT_REQUESTED = "not_requested"
-    PENDING = "pending"
-    APPROVED = "approved"
-    CHANGES_REQUESTED = "changes_requested"
-    REJECTED = "rejected"
+    APPROVE = "approve"
+    REQUEST_REVISION = "request_revision"
+    REJECT = "reject"
+    REVISION_READY = "revision_ready"
 
 
-class ApplicationState(TypedDict):
-    """Information shared between LangGraph workflow nodes."""
+class WorkflowState(TypedDict):
+    """LangGraph state containing references and redacted operational metadata only."""
 
     workflow_id: str
+    job_key: str
+    workspace_reference: str
+    candidate_reference: str
+    evidence_reference: str
+    discovery_reference: str
+    score_reference: str | None
+    application_reference: str | None
     stage: WorkflowStage
-    approval_status: ApprovalStatus
-
-    candidate_profile: CandidateProfile | None
-    job_description: JobDescription | None
-    relevance_score: JobRelevanceScore | None
-
-    evidence_bank: list[dict[str, object]]
-    company_research: dict[str, object]
-
-    tailored_resume: str | None
-    cover_letter: str | None
-    recruiter_email: str | None
-    application_answers: dict[str, str]
-
-    required_manual_inputs: list[str]
-    quality_control_flags: list[str]
-    errors: list[str]
-    audit_log: list[str]
-
+    review_revision: int
+    warnings: list[str]
+    recoverable_errors: list[str]
+    completed_nodes: list[str]
     created_at: datetime
     updated_at: datetime
 
 
-def create_initial_state() -> ApplicationState:
-    """Create an independent, empty workflow state."""
-    current_time = datetime.now(UTC)
+_PROHIBITED_LEGACY_STAGES = {"applied", "autofilled", "ready_for_autofill", "submitted"}
 
-    return ApplicationState(
-        workflow_id=str(uuid4()),
-        stage=WorkflowStage.CREATED,
-        approval_status=ApprovalStatus.NOT_REQUESTED,
-        candidate_profile=None,
-        job_description=None,
-        relevance_score=None,
-        evidence_bank=[],
-        company_research={},
-        tailored_resume=None,
-        cover_letter=None,
-        recruiter_email=None,
-        application_answers={},
-        required_manual_inputs=[],
-        quality_control_flags=[],
-        errors=[],
-        audit_log=["Workflow created."],
-        created_at=current_time,
-        updated_at=current_time,
-    )
+
+def create_initial_state(
+    *,
+    job_key: str = "",
+    workspace_reference: str = "",
+    candidate_reference: str = "",
+    evidence_reference: str = "",
+    discovery_reference: str = "",
+    score_reference: str | None = None,
+    application_reference: str | None = None,
+    workflow_id: str | None = None,
+) -> WorkflowState:
+    """Create a reference-only workflow state without an approval decision."""
+    now = datetime.now(UTC)
+    return {
+        "workflow_id": workflow_id or str(uuid4()),
+        "job_key": job_key,
+        "workspace_reference": workspace_reference,
+        "candidate_reference": candidate_reference,
+        "evidence_reference": evidence_reference,
+        "discovery_reference": discovery_reference,
+        "score_reference": score_reference,
+        "application_reference": application_reference,
+        "stage": WorkflowStage.INPUT_VALIDATION,
+        "review_revision": 0,
+        "warnings": [],
+        "recoverable_errors": [],
+        "completed_nodes": [],
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+def validate_workflow_state(state: WorkflowState | dict[str, object]) -> WorkflowState:
+    """Fail closed on malformed or legacy external-action workflow data."""
+    raw_stage = str(state.get("stage", ""))
+    if raw_stage in _PROHIBITED_LEGACY_STAGES:
+        raise ValueError("Workflow checkpoint is incompatible with the local approval workflow.")
+    try:
+        stage = WorkflowStage(raw_stage)
+    except ValueError as error:
+        raise ValueError("Workflow checkpoint has an invalid internal stage.") from error
+    required = {
+        "workflow_id",
+        "job_key",
+        "workspace_reference",
+        "candidate_reference",
+        "evidence_reference",
+        "discovery_reference",
+        "review_revision",
+        "warnings",
+        "recoverable_errors",
+        "completed_nodes",
+        "created_at",
+        "updated_at",
+    }
+    if not required.issubset(state):
+        raise ValueError("Workflow checkpoint is incomplete.")
+    validated = dict(state)
+    validated["stage"] = stage
+    return validated  # type: ignore[return-value]
