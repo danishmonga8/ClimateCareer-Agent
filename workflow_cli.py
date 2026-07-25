@@ -1,4 +1,4 @@
-"""Run the complete ClimateCareer-Agent Phase 1 workflow."""
+"""Run the unified ClimateCareer-Agent workflow."""
 
 from __future__ import annotations
 
@@ -18,14 +18,12 @@ class WorkflowError(RuntimeError):
 
 def require_file(path: Path, description: str) -> None:
     """Confirm that a required file exists."""
-
     if not path.is_file():
         raise WorkflowError(f"{description} was not found: {path}")
 
 
 def run_step(step_name: str, command: list[str]) -> None:
     """Run one workflow command and stop if it fails."""
-
     print(f"\n=== {step_name.upper()} ===")
 
     result = subprocess.run(
@@ -42,11 +40,11 @@ def run_step(step_name: str, command: list[str]) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     """Create the command-line argument parser."""
-
     parser = argparse.ArgumentParser(
         description=(
-            "Run CV extraction, evidence generation, job parsing, "
-            "relevance scoring, and recommendation-report generation."
+            "Run candidate extraction, job parsing, relevance scoring, "
+            "recommendation reporting, and optional application "
+            "personalization."
         )
     )
 
@@ -56,20 +54,17 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Path to the candidate CV in PDF or DOCX format.",
     )
-
     parser.add_argument(
         "--job-file",
         type=Path,
         required=True,
         help="Path to the UTF-8 job-description text file.",
     )
-
     parser.add_argument(
         "--job-url",
         required=True,
         help="Original job-advertisement URL.",
     )
-
     parser.add_argument(
         "--pure-ai-role",
         action="store_true",
@@ -78,15 +73,44 @@ def build_parser() -> argparse.ArgumentParser:
             "AI-focused role."
         ),
     )
+    parser.add_argument(
+        "--personalize",
+        action="store_true",
+        help=(
+            "Create an evidence-backed personalized application draft "
+            "after generating the recommendation report."
+        ),
+    )
+    parser.add_argument(
+        "--questions",
+        type=Path,
+        help=(
+            "Optional JSON array of application questions. "
+            "Requires --personalize."
+        ),
+    )
 
     return parser
 
 
 def run_workflow(args: argparse.Namespace) -> None:
-    """Run all Phase 1 workflow stages."""
-
+    """Run Phase 1 and optional Phase 2 personalization."""
     cv_path = args.cv.expanduser().resolve()
     job_file_path = args.job_file.expanduser().resolve()
+
+    questions_path = None
+
+    if args.questions is not None:
+        if not args.personalize:
+            raise WorkflowError(
+                "--questions requires the --personalize option."
+            )
+
+        questions_path = args.questions.expanduser().resolve()
+        require_file(
+            questions_path,
+            "Application-question file",
+        )
 
     require_file(cv_path, "Candidate CV")
     require_file(job_file_path, "Job-description file")
@@ -108,7 +132,6 @@ def run_workflow(args: argparse.Namespace) -> None:
         PRIVATE_DIR / "candidate_profile.json",
         "Generated candidate profile",
     )
-
     require_file(
         PRIVATE_DIR / "evidence_bank.json",
         "Generated evidence bank",
@@ -157,6 +180,30 @@ def run_workflow(args: argparse.Namespace) -> None:
         "Generated recommendation report",
     )
 
+    application_path = (
+        PRIVATE_DIR / "personalized_application.json"
+    )
+
+    if args.personalize:
+        personalization_command = [
+            str(PROJECT_ROOT / "personalization_cli.py")
+        ]
+
+        if questions_path is not None:
+            personalization_command.extend(
+                ["--questions", str(questions_path)]
+            )
+
+        run_step(
+            "Application personalization",
+            personalization_command,
+        )
+
+        require_file(
+            application_path,
+            "Generated personalized application",
+        )
+
     print("\n=== WORKFLOW COMPLETED SUCCESSFULLY ===")
     print(
         "Candidate profile: "
@@ -167,10 +214,12 @@ def run_workflow(args: argparse.Namespace) -> None:
     print(f"Scoring result: {PRIVATE_DIR / 'scoring_result.json'}")
     print(f"Recommendation report: {report_path}")
 
+    if args.personalize:
+        print(f"Personalized application: {application_path}")
+
 
 def main() -> int:
     """Run the unified workflow command."""
-
     parser = build_parser()
     args = parser.parse_args()
 

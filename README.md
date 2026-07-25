@@ -45,6 +45,10 @@ Requires Python 3.12 or later.
 - Generate the report: `python report_cli.py`
 
 Private outputs are stored under `documents/private/`.
+- Complete Phase 1 workflow: `python workflow_cli.py --cv .\documents\private\master_cv.pdf --job-file .\documents\private\job_description.txt --job-url "https://example.com/job"`
+- Complete workflow with personalization: `python workflow_cli.py --cv .\documents\private\master_cv.pdf --job-file .\documents\private\job_description.txt --job-url "https://example.com/job" --personalize`
+- Include application questions: add `--questions .\documents\private\application_questions.json`
+
 
 ## Quality checks
 
@@ -63,3 +67,17 @@ The system provides recommendations only. It must not invent candidate experienc
 - Application-document personalization.
 - Quality-control and approval stages.
 - Streamlit user interface.
+- LangGraph workflow orchestration.
+- Quality-control and approval commands.
+- Controlled autofill after explicit approval.
+- Streamlit user interface.
+
+## Phase 2 capabilities
+
+- Generate an evidence-backed tailored resume draft.
+- Generate an evidence-backed cover-letter draft.
+- Assess optional application questions.
+- Route uncertain or sensitive answers to human review.
+- Store personalized applications privately as validated JSON.
+- Require explicit personalization selection in the unified workflow.
+- Keep approval and application submission under human control.
