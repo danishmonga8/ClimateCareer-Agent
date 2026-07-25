@@ -29,6 +29,7 @@ dist/
 # Operating-system files
 .DS_Store
 Thumbs.db
+Microsoft/Windows/PowerShell/ModuleAnalysisCache
 
 # Application-generated data
 data/generated/

@@ -42,6 +42,16 @@ The system does not submit applications automatically. Personalization, review, 
 - Prevent approval while unresolved review items remain.
 - Maintain a strict no-submission boundary.
 
+## Phase 3 capabilities
+
+- Collect published jobs from public Greenhouse, Lever, and Ashby job boards.
+- Normalize ATS-specific fields into one validated discovery model.
+- Filter listings locally by keyword, location, work arrangement, and employment type.
+- Deduplicate exact and cross-source copies while retaining the richer record.
+- Store normalized listings as private, validated JSON snapshots.
+- Pass selected listings into the existing job parser and relevance scorer.
+- Use read-only public endpoints without credentials or application submission.
+
 ## Workflow
 
 1. Parse the master CV.
@@ -198,6 +208,48 @@ Approval fails when:
 
 Approval records the user’s decision only. It does not submit an application.
 
+## Phase 3 usage
+
+Collect a Greenhouse public board:
+
+```powershell
+python discovery_cli.py `
+    --company "Example Climate" `
+    --include climate `
+    greenhouse `
+    --board example
+```
+
+Collect a Lever public site:
+
+```powershell
+python discovery_cli.py `
+    --company "Example Climate" `
+    --work-arrangement remote `
+    lever `
+    --site example
+```
+
+Collect an Ashby public board:
+
+```powershell
+python discovery_cli.py `
+    --company "Example Climate" `
+    ashby `
+    --board example
+```
+
+The default private output is:
+
+```text
+documents/private/discovered_jobs.json
+```
+
+The collectors make unauthenticated GET requests only. LinkedIn is not scraped;
+only permitted public links may be recorded for manual discovery. The system does
+not access logged-in pages, bypass controls, automate Easy Apply, or submit an
+application.
+
 ## Unified workflow
 
 ### Complete Phase 1 workflow
@@ -279,6 +331,7 @@ structured_job.json
 scoring_result.json
 recommendation_report.md
 personalized_application.json
+discovered_jobs.json
 ```
 
 These files can contain personal, professional, scoring, and application information and must never be committed.
@@ -372,6 +425,8 @@ It must not:
 - Answer sensitive questions without human confirmation.
 - Approve an application with unresolved review items.
 - Automatically submit applications.
+- Scrape logged-in LinkedIn pages or bypass access controls.
+- Automate LinkedIn Easy Apply or any other application submission.
 - Replace final human judgment.
 
 ## Planned development
