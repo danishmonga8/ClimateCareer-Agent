@@ -138,6 +138,7 @@ def test_complete_workflow_runs_phase_one_stages(
         job_url="https://example.com/jobs/123",
         pure_ai_role=True,
         personalize=False,
+        begin_review=False,
         questions=None,
     )
 
@@ -230,6 +231,7 @@ def test_personalization_runs_as_optional_fifth_stage(
         job_url="https://example.com/jobs/123",
         pure_ai_role=False,
         personalize=True,
+        begin_review=False,
         questions=questions_path,
     )
 
@@ -254,11 +256,119 @@ def test_questions_require_personalization(
         job_url="https://example.com/jobs/123",
         pure_ai_role=False,
         personalize=False,
+        begin_review=False,
         questions=tmp_path / "questions.json",
     )
 
     with pytest.raises(
         workflow_cli.WorkflowError,
         match="--questions requires the --personalize option",
+    ):
+        workflow_cli.run_workflow(args)
+
+
+def test_begin_review_runs_after_personalization(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Human review should start after personalization when requested."""
+    cv_path = tmp_path / "candidate.pdf"
+    job_path = tmp_path / "job_description.txt"
+    private_dir = tmp_path / "documents" / "private"
+
+    cv_path.write_bytes(b"example CV")
+    job_path.write_text(
+        "Example job description",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        workflow_cli,
+        "PRIVATE_DIR",
+        private_dir,
+    )
+
+    recorded_steps: list[tuple[str, list[str]]] = []
+
+    def fake_run_step(
+        step_name: str,
+        command: list[str],
+    ) -> None:
+        recorded_steps.append((step_name, command))
+        private_dir.mkdir(parents=True, exist_ok=True)
+
+        generated_files = {
+            "Candidate profile and evidence generation": [
+                "candidate_profile.json",
+                "evidence_bank.json",
+            ],
+            "Job-description parsing": [
+                "structured_job.json",
+            ],
+            "Candidate-job relevance scoring": [
+                "scoring_result.json",
+            ],
+            "Recommendation-report generation": [
+                "recommendation_report.md",
+            ],
+            "Application personalization": [
+                "personalized_application.json",
+            ],
+        }
+
+        for filename in generated_files.get(step_name, []):
+            (private_dir / filename).write_text(
+                "{}",
+                encoding="utf-8",
+            )
+
+    monkeypatch.setattr(
+        workflow_cli,
+        "run_step",
+        fake_run_step,
+    )
+
+    args = argparse.Namespace(
+        cv=cv_path,
+        job_file=job_path,
+        job_url="https://example.com/jobs/123",
+        pure_ai_role=False,
+        personalize=True,
+        begin_review=True,
+        questions=None,
+    )
+
+    workflow_cli.run_workflow(args)
+
+    assert len(recorded_steps) == 6
+    assert recorded_steps[-1][0] == "Begin application review"
+
+    review_command = recorded_steps[-1][1]
+
+    assert review_command[0].endswith("review_cli.py")
+    assert review_command[1] == "begin"
+    assert "--application" in review_command
+    assert str(
+        private_dir / "personalized_application.json"
+    ) in review_command
+
+
+def test_begin_review_requires_personalization(
+    tmp_path: Path,
+) -> None:
+    """Human review cannot start without creating an application."""
+    args = argparse.Namespace(
+        cv=tmp_path / "candidate.pdf",
+        job_file=tmp_path / "job.txt",
+        job_url="https://example.com/jobs/123",
+        pure_ai_role=False,
+        personalize=False,
+        begin_review=True,
+        questions=None,
+    )
+
+    with pytest.raises(
+        workflow_cli.WorkflowError,
+        match="--begin-review requires the --personalize option",
     ):
         workflow_cli.run_workflow(args)

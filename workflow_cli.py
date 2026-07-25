@@ -43,8 +43,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Run candidate extraction, job parsing, relevance scoring, "
-            "recommendation reporting, and optional application "
-            "personalization."
+            "recommendation reporting, optional application "
+            "personalization, and optional human-review initiation."
         )
     )
 
@@ -82,6 +82,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--begin-review",
+        action="store_true",
+        help=(
+            "Move the generated personalized application into human "
+            "review. Requires --personalize. Approval remains a "
+            "separate manual action."
+        ),
+    )
+    parser.add_argument(
         "--questions",
         type=Path,
         help=(
@@ -94,11 +103,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run_workflow(args: argparse.Namespace) -> None:
-    """Run Phase 1 and optional Phase 2 personalization."""
+    """Run Phase 1 and optional Phase 2 application stages."""
     cv_path = args.cv.expanduser().resolve()
     job_file_path = args.job_file.expanduser().resolve()
 
     questions_path = None
+
+    if args.begin_review and not args.personalize:
+        raise WorkflowError(
+            "--begin-review requires the --personalize option."
+        )
 
     if args.questions is not None:
         if not args.personalize:
@@ -107,6 +121,7 @@ def run_workflow(args: argparse.Namespace) -> None:
             )
 
         questions_path = args.questions.expanduser().resolve()
+
         require_file(
             questions_path,
             "Application-question file",
@@ -204,6 +219,22 @@ def run_workflow(args: argparse.Namespace) -> None:
             "Generated personalized application",
         )
 
+    if args.begin_review:
+        run_step(
+            "Begin application review",
+            [
+                str(PROJECT_ROOT / "review_cli.py"),
+                "begin",
+                "--application",
+                str(application_path),
+            ],
+        )
+
+        require_file(
+            application_path,
+            "Application under human review",
+        )
+
     print("\n=== WORKFLOW COMPLETED SUCCESSFULLY ===")
     print(
         "Candidate profile: "
@@ -216,6 +247,12 @@ def run_workflow(args: argparse.Namespace) -> None:
 
     if args.personalize:
         print(f"Personalized application: {application_path}")
+
+    if args.begin_review:
+        print(
+            "Human review started. Explicit approval is still "
+            "required through review_cli.py."
+        )
 
 
 def main() -> int:
