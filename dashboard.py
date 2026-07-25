@@ -29,7 +29,9 @@ from app.services.dashboard_review_service import (
     apply_dashboard_decision,
     resubmit_for_review,
 )
+from app.workflows.orchestration import WorkflowOrchestrationError, WorkflowOrchestrator
 from app.workflows.repository import find_workflow_for_job
+from app.workflows.state import WorkflowDecision
 
 st.set_page_config(page_title="Human Approval Dashboard", page_icon="✓", layout="wide")
 
@@ -134,6 +136,33 @@ def _confirm_decision(
     )
     if st.button(label, type="primary", disabled=not confirmed):
         try:
+            checkpoint_directory = workspace_path.parent / "workflow_checkpoints"
+            workflow = find_workflow_for_job(view.record.job_key, checkpoint_directory)
+            if workflow is not None:
+                workflow_action = (
+                    WorkflowDecision.REVISION_READY.value
+                    if action is None
+                    else {
+                        DashboardReviewAction.APPROVED: WorkflowDecision.APPROVE.value,
+                        DashboardReviewAction.REVISION_REQUESTED: WorkflowDecision.REQUEST_REVISION.value,
+                        DashboardReviewAction.REJECTED: WorkflowDecision.REJECT.value,
+                    }[action]
+                )
+                result = WorkflowOrchestrator(checkpoint_directory).resume(
+                    workflow["workflow_id"],
+                    {
+                        "action": workflow_action,
+                        "expected_revision": view.record.revision,
+                        "reviewer_label": st.session_state.get("reviewer_label", "").strip(),
+                        "reason_or_note": note,
+                    },
+                )
+                if result["stage"].value == "recoverable_failure":
+                    raise DashboardReviewError(
+                        "Workflow recovery is required before another decision."
+                    )
+                st.success("Internal workflow decision saved. The dashboard will reload now.")
+                st.rerun()
             current, current_view = _load_current_review_context(
                 workspace_path,
                 view.record.job_key,
@@ -157,7 +186,7 @@ def _confirm_decision(
                     linked_application=current_view.application if current_view else None,
                 )
             save_updated_dashboard_workspace(current, updated, workspace_path)
-        except (DashboardReviewError, DashboardStorageError) as error:
+        except (DashboardReviewError, DashboardStorageError, WorkflowOrchestrationError) as error:
             st.error(str(error))
             return
         st.success("Internal decision saved. The dashboard will reload now.")
