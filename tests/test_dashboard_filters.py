@@ -55,3 +55,16 @@ def test_search_company_location_and_date_filters_are_local_and_inclusive() -> N
 
     assert result == [first]
     assert sort_queue([second, first], "Company A–Z") == [second, first]
+
+
+def test_missing_scores_are_visible_by_default_and_can_be_hidden() -> None:
+    view = make_view("1", "Northwind", "Remote", datetime(2026, 1, 1, tzinfo=UTC))
+
+    assert filter_queue([view], QueueFilters(minimum_score=0, maximum_score=100)) == [view]
+    assert (
+        filter_queue(
+            [view],
+            QueueFilters(minimum_score=0, maximum_score=100, include_missing_scores=False),
+        )
+        == []
+    )

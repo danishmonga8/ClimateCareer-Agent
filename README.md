@@ -432,6 +432,15 @@ For concise test output:
 python -m pytest -q
 ```
 
+### Offline end-to-end verification
+
+Run the Phase 5 fictional, offline integration checks without an OpenAI API call
+or live job-board request:
+
+```powershell
+python -m pytest -q tests/test_e2e_verification.py tests/test_dashboard_app.py
+```
+
 ### Formatting and Git checks
 
 ```powershell
@@ -480,8 +489,6 @@ It must not:
 
 ## Planned development
 
-- End-to-end workflow verification with realistic private inputs.
-- Streamlit user interface.
 - LangGraph workflow orchestration.
 - Additional quality-control and approval commands.
 - Controlled application-field autofill after explicit approval.

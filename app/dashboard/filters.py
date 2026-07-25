@@ -15,6 +15,7 @@ class QueueFilters:
     statuses: frozenset[DashboardReviewStatus] = field(default_factory=frozenset)
     minimum_score: float | None = None
     maximum_score: float | None = None
+    include_missing_scores: bool = True
     companies: frozenset[str] = field(default_factory=frozenset)
     sources: frozenset[str] = field(default_factory=frozenset)
     locations: frozenset[str] = field(default_factory=frozenset)
@@ -43,9 +44,19 @@ def filter_queue(
             results.append(view)
             continue
         score = _score(view)
-        if filters.minimum_score is not None and (score is None or score < filters.minimum_score):
+        if score is None and not filters.include_missing_scores:
             continue
-        if filters.maximum_score is not None and (score is None or score > filters.maximum_score):
+        if (
+            score is not None
+            and filters.minimum_score is not None
+            and score < filters.minimum_score
+        ):
+            continue
+        if (
+            score is not None
+            and filters.maximum_score is not None
+            and score > filters.maximum_score
+        ):
             continue
         if filters.companies and job.company not in filters.companies:
             continue

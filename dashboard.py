@@ -21,7 +21,6 @@ from app.models.dashboard_review import (
 )
 from app.services.dashboard_repository import (
     DashboardStorageError,
-    load_dashboard_workspace,
     save_dashboard_workspace,
     save_updated_dashboard_workspace,
 )
@@ -73,6 +72,7 @@ def _sidebar_filters(views: tuple[DashboardJobView, ...]) -> tuple[QueueFilters,
             format_func=status_label,
         )
         scores = st.slider("Score range", 0, 100, (0, 100))
+        include_missing_scores = st.checkbox("Include jobs without scores", value=True)
         companies = sorted({view.job.company for view in views if view.job})
         sources = sorted({view.job.source.value for view in views if view.job})
         locations = sorted({view.job.location or "Unspecified" for view in views if view.job})
@@ -89,6 +89,7 @@ def _sidebar_filters(views: tuple[DashboardJobView, ...]) -> tuple[QueueFilters,
             statuses=frozenset(statuses),
             minimum_score=float(scores[0]),
             maximum_score=float(scores[1]),
+            include_missing_scores=include_missing_scores,
             companies=frozenset(selected_companies),
             sources=frozenset(selected_sources),
             locations=frozenset(selected_locations),
@@ -97,6 +98,19 @@ def _sidebar_filters(views: tuple[DashboardJobView, ...]) -> tuple[QueueFilters,
         ),
         sort_by,
     )
+
+
+def _load_current_review_context(
+    workspace_path: Path,
+    job_key: str,
+) -> tuple[DashboardWorkspace, DashboardJobView | None]:
+    """Reload the workspace and linked materials before a decision."""
+    current_data = load_dashboard_data(workspace_path)
+    current_view = next(
+        (candidate for candidate in current_data.jobs if candidate.record.job_key == job_key),
+        None,
+    )
+    return current_data.workspace, current_view
 
 
 @st.dialog("Confirm internal review decision")
@@ -119,7 +133,10 @@ def _confirm_decision(
     )
     if st.button(label, type="primary", disabled=not confirmed):
         try:
-            current = load_dashboard_workspace(workspace_path)
+            current, current_view = _load_current_review_context(
+                workspace_path,
+                view.record.job_key,
+            )
             if action is None:
                 updated = resubmit_for_review(
                     current,
@@ -136,7 +153,7 @@ def _confirm_decision(
                     view.record.revision,
                     st.session_state.get("reviewer_label", "").strip(),
                     note,
-                    linked_application=view.application,
+                    linked_application=current_view.application if current_view else None,
                 )
             save_updated_dashboard_workspace(current, updated, workspace_path)
         except (DashboardReviewError, DashboardStorageError) as error:
