@@ -363,6 +363,55 @@ The review workflow enforces the following controls:
 - Approved applications cannot be returned to review improperly.
 - No application-submission state or command exists.
 
+## Phase 4: Human Approval Dashboard
+
+Launch the local dashboard from the repository root:
+
+```powershell
+python -m streamlit run dashboard.py
+```
+
+The dashboard reads one private workspace JSON file. It contains review metadata
+and references to existing discovery, scoring, and personalized-application JSON
+artifacts; it never copies, regenerates, or changes their content. The default
+private location is `documents/private/dashboard_workspace.json`.
+
+Use paths relative to the workspace file where practical. This redacted example
+uses only placeholder data:
+
+```json
+{
+  "records": [
+    {
+      "source": "manual",
+      "source_board": "example-board",
+      "source_job_id": "example-job-001",
+      "artifacts": {
+        "discovery_snapshot": "discovered_jobs.json",
+        "scoring_result": "example_score.json",
+        "personalized_application": "example_application.json"
+      }
+    }
+  ],
+  "audit_events": [],
+  "schema_version": "1.0"
+}
+```
+
+Dashboard statuses are internal only:
+
+- **Awaiting review**: no decision has been recorded.
+- **Revision requested**: a reviewer recorded instructions before another review.
+- **Approved for manual next step**: the internal package is approved for a
+  human-led next step. It does **not** mean submitted.
+- **Rejected**: the internal decision is final in the dashboard.
+
+Every dashboard decision records an append-only local audit event. Rejection and
+revision requests require a reason; approval is blocked when linked application
+review items remain unresolved. The dashboard never submits an application,
+opens an Apply flow, sends messages, logs in, starts browser automation, or
+changes any external service.
+
 ## Quality checks
 
 ### Lint
