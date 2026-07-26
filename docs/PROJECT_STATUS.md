@@ -167,6 +167,45 @@ human-approval, and no-submission boundaries.
   upload, download, email, API credit, external service, authentication, or
   submission capability was used or added.
 
+## Expanded audit logging and review visibility delivery
+
+- Added a typed, sanitized, selected-job audit projection over existing
+  dashboard-review and optional Phase 8 autofill audit sources. This is a
+  read-only aggregation, not a new persisted or unified ledger.
+- Timeline entries expose only source, category, action, internal status
+  transition, timestamp, and deterministic opaque source metadata. Existing
+  notes and reviewer labels render only as generic recorded indicators.
+- Added deterministic newest-first ordering, bounded opaque cursor pagination,
+  and source/category/action/status/time filters operating only on structured
+  metadata.
+- Added non-blocking sanitized integrity visibility for malformed or unavailable
+  sources, duplicate identifiers/source keys, linkage problems, transition
+  conflicts, timestamp problems, cursor problems, and inconsistent current
+  checkpoint metadata. The optional current session status is clearly labelled
+  **Current checkpoint summary**, not historical audit evidence.
+- Dashboard timeline loading, filtering, pagination, and refresh remain
+  read-only. They do not alter review decisions, audit sources, workflow
+  checkpoints, autofill sessions, or artifact state.
+- No export/download, retention/deletion automation, cryptographic
+  tamper-evidence, browser, upload, email, authentication, API, external
+  service, Apply, Send, or submission capability was added.
+
+## Expanded audit logging and review visibility known limitations
+
+- The projection reflects only existing local authoritative sources and detects
+  structural inconsistencies; it does not provide cryptographic tamper-evidence
+  or repair historical records.
+- Timeline visibility is selected-job scoped and local only. It provides no
+  export/download capability and no retention or deletion automation.
+
+## Expanded audit logging and review visibility final validation
+
+- Focused audit-timeline, dashboard, repository, review, workflow, quality, CLI,
+  and autofill regression tests: 58 passed.
+- Complete offline suite: 187 passed, 1 skipped (the existing Windows local
+  symlink-permission skip remains conditional).
+- Ruff, formatting, diff, and controlled Streamlit verification: passed.
+
 ## Next roadmap item
 
-Expanded audit logging and review visibility.
+No later roadmap item is currently documented.

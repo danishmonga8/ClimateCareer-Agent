@@ -1,14 +1,24 @@
 """Safe Streamlit views for dashboard detail and material review."""
 
+from datetime import UTC, datetime, time
+
 import streamlit as st
 
 from app.dashboard.components import render_status
 from app.dashboard.data_loader import DashboardJobView
+from app.models.audit_timeline import (
+    AuditTimelineAction,
+    AuditTimelineCategory,
+    AuditTimelineFilters,
+    AuditTimelinePageRequest,
+    AuditTimelineSource,
+    AuditTimelineStatus,
+)
 from app.models.dashboard_review import (
-    DashboardAuditEvent,
     DashboardReviewStatus,
     DashboardWorkspace,
 )
+from app.services.audit_timeline_service import AuditTimelineService
 
 
 def render_overview(workspace: DashboardWorkspace, views: tuple[DashboardJobView, ...]) -> None:
@@ -27,7 +37,7 @@ def render_overview(workspace: DashboardWorkspace, views: tuple[DashboardJobView
         for event in reversed(workspace.audit_events[-5:]):
             st.caption(
                 f"{event.timestamp.strftime('%Y-%m-%d %H:%M UTC')} — "
-                f"{event.action.value.replace('_', ' ')} by {event.reviewer_label}"
+                f"{event.action.value.replace('_', ' ')} - Reviewer recorded"
             )
     else:
         st.caption("No internal review actions have been recorded yet.")
@@ -113,21 +123,111 @@ def render_materials(view: DashboardJobView) -> None:
             st.write(claim.text)
 
 
-def render_audit(workspace: DashboardWorkspace, job_key: str) -> None:
-    """Show immutable events in chronological order."""
-    events: list[DashboardAuditEvent] = [
-        event for event in workspace.audit_events if event.job_key == job_key
-    ]
-    if not events:
-        st.info("No internal review history exists for this job yet.")
-        return
-    for event in events:
-        st.write(
-            f"{event.timestamp.strftime('%Y-%m-%d %H:%M UTC')} — "
-            f"{event.previous_status.value} → {event.new_status.value}"
-        )
+def render_audit_timeline(
+    workspace: DashboardWorkspace,
+    job_key: str,
+    service: AuditTimelineService,
+) -> None:
+    """Render a selected-job audit projection without changing any audit source."""
+    key_prefix = f"audit-timeline-{job_key}"
+    sources = st.multiselect(
+        "Audit sources",
+        [source.value for source in AuditTimelineSource],
+        format_func=lambda value: value.replace("_", " ").title(),
+        key=f"{key_prefix}-sources",
+    )
+    categories = st.multiselect(
+        "Event categories",
+        [category.value for category in AuditTimelineCategory],
+        format_func=lambda value: value.replace("_", " ").title(),
+        key=f"{key_prefix}-categories",
+    )
+    actions = st.multiselect(
+        "Actions",
+        [action.value for action in AuditTimelineAction],
+        format_func=lambda value: value.replace("_", " ").title(),
+        key=f"{key_prefix}-actions",
+    )
+    statuses = st.multiselect(
+        "Statuses",
+        [status.value for status in AuditTimelineStatus],
+        format_func=lambda value: value.replace("_", " ").title(),
+        key=f"{key_prefix}-statuses",
+    )
+    selected_dates = st.date_input("Audit time range", value=(), key=f"{key_prefix}-dates")
+    from_timestamp = None
+    to_timestamp = None
+    if isinstance(selected_dates, tuple) and len(selected_dates) == 2:
+        from_timestamp = datetime.combine(selected_dates[0], time.min, tzinfo=UTC)
+        to_timestamp = datetime.combine(selected_dates[1], time.max, tzinfo=UTC)
+    filters = AuditTimelineFilters(
+        sources=frozenset(AuditTimelineSource(value) for value in sources),
+        categories=frozenset(AuditTimelineCategory(value) for value in categories),
+        actions=frozenset(AuditTimelineAction(value) for value in actions),
+        statuses=frozenset(AuditTimelineStatus(value) for value in statuses),
+        from_timestamp=from_timestamp,
+        to_timestamp=to_timestamp,
+    )
+    signature = filters.model_dump_json()
+    signature_key = f"{key_prefix}-filter-signature"
+    cursor_key = f"{key_prefix}-cursor"
+    if st.session_state.get(signature_key) != signature:
+        st.session_state[signature_key] = signature
+        st.session_state[cursor_key] = None
+    page = service.page(
+        workspace,
+        job_key,
+        filters=filters,
+        request=AuditTimelinePageRequest(cursor=st.session_state.get(cursor_key)),
+    )
+    metrics = st.columns(4)
+    metrics[0].metric("Visible events", page.counts.total)
+    metrics[1].metric("Review events", page.counts.dashboard_review)
+    metrics[2].metric("Autofill events", page.counts.autofill)
+    metrics[3].metric("Integrity warnings", len(page.integrity_findings))
+    for finding in page.integrity_findings:
+        st.warning(f"{finding.code}: {finding.message}")
+        st.caption(f"Recovery: {finding.recovery_guidance}")
+    if page.checkpoint_summary is not None:
+        summary = page.checkpoint_summary
         st.caption(
-            f"Action: {event.action.value.replace('_', ' ')} · Reviewer: {event.reviewer_label}"
+            f"{summary.label}: {summary.status.value.replace('_', ' ')} "
+            f"- {'compatible' if summary.compatible else 'inconsistent'}"
         )
-        if event.reason_or_note:
-            st.write(event.reason_or_note)
+    if not page.entries:
+        st.info("No sanitized audit events match the selected filters.")
+    for entry in page.entries:
+        st.write(
+            f"{entry.timestamp.strftime('%Y-%m-%d %H:%M UTC')} - "
+            f"{entry.source.value.replace('_', ' ')} - {entry.action.value.replace('_', ' ')}"
+        )
+        if entry.transition is not None:
+            previous = (
+                entry.transition.previous.value.replace("_", " ")
+                if entry.transition.previous
+                else "not recorded"
+            )
+            current = (
+                entry.transition.current.value.replace("_", " ")
+                if entry.transition.current
+                else "not recorded"
+            )
+            st.caption(f"Internal status: {previous} -> {current}")
+        indicators: list[str] = []
+        if entry.note_recorded:
+            indicators.append("Review note recorded")
+        if entry.reviewer_recorded:
+            indicators.append("Reviewer recorded")
+        if indicators:
+            st.caption(" - ".join(indicators))
+    pagination = st.columns(2)
+    if pagination[0].button(
+        "Earlier audit events",
+        key=f"{key_prefix}-next",
+        disabled=page.next_cursor is None,
+    ):
+        st.session_state[cursor_key] = page.next_cursor
+        st.rerun()
+    if pagination[1].button("First audit page", key=f"{key_prefix}-first"):
+        st.session_state[cursor_key] = None
+        st.rerun()

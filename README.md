@@ -494,6 +494,40 @@ adapter, HTTP/API action, upload, download, email, authentication, CAPTCHA/MFA,
 payment, consent, Apply, Send, or Submit capability. Population never means an
 application was submitted.
 
+## Expanded audit logging and review visibility
+
+The dashboard now provides a local, selected-job, read-only audit timeline. It
+projects existing dashboard-review audit events and, when an explicitly
+configured local session repository is available, Phase 8 autofill audit events.
+It does not create a unified audit ledger, copy history into a new store, repair
+source data, or mutate review, workflow, session, or audit state during loading,
+filtering, pagination, or refresh.
+
+Timeline entries expose only structured internal metadata: source, category,
+action, internal status transition, timestamp, and a deterministic opaque source
+key. Existing review notes and reviewer labels are never rendered; the dashboard
+shows only the generic indicators **Review note recorded** and **Reviewer
+recorded**. Autofill field values, candidate data, evidence, application
+materials, paths, roots, registry records, checkpoint payloads, credentials, and
+raw exceptions are not included in the projection.
+
+Entries are ordered newest first with stable tie-breakers. Source, category,
+action, status, and time-range filters operate only on structured metadata. Pages
+use bounded opaque cursors. A malformed or stale cursor produces a sanitized
+read-only warning and does not change history. Current local session checkpoint
+metadata, if available, is explicitly labelled **Current checkpoint summary**;
+it is not historical audit evidence.
+
+The view exposes sanitized integrity warnings for unavailable or malformed
+sources, duplicate identifiers/source keys, invalid linkage, conflicting
+transitions, invalid timestamps, malformed cursors, and inconsistent current
+checkpoint metadata. These warnings are visible and non-blocking: they do not
+change approval, revision, rejection, workflow, or autofill decisions.
+
+The audit view is local/offline and has no export or download, retention or
+deletion automation, cryptographic tamper-evidence, browser, upload, email,
+authentication, external-service, or submission capability.
+
 ### Lint
 
 ```powershell
@@ -569,6 +603,6 @@ It must not:
 
 ## Planned development
 
-- Expanded audit logging and review visibility.
+- No later roadmap item is currently documented.
 
 Any future autofill capability must remain human-supervised and must not introduce automatic submission.

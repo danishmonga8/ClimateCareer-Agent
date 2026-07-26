@@ -8,7 +8,7 @@ from app.dashboard.components import status_label
 from app.dashboard.data_loader import DashboardJobView, load_dashboard_data
 from app.dashboard.filters import QueueFilters, filter_queue, sort_queue
 from app.dashboard.views import (
-    render_audit,
+    render_audit_timeline,
     render_job_detail,
     render_materials,
     render_overview,
@@ -19,6 +19,7 @@ from app.models.dashboard_review import (
     DashboardReviewStatus,
     DashboardWorkspace,
 )
+from app.services.audit_timeline_service import AuditTimelineService
 from app.services.autofill_dashboard_service import (
     AutofillDashboardError,
     AutofillDashboardService,
@@ -261,6 +262,17 @@ def _configured_autofill_service() -> AutofillDashboardService | None:
     return service if isinstance(service, AutofillDashboardService) else None
 
 
+def _configured_audit_timeline_service() -> AuditTimelineService:
+    """Return a read-only source adapter; rendering never creates local sessions."""
+    configured = st.session_state.get("_audit_timeline_service")
+    if isinstance(configured, AuditTimelineService):
+        return configured
+    autofill = _configured_autofill_service()
+    return AuditTimelineService(
+        autofill_session_repository=autofill.session_repository if autofill else None
+    )
+
+
 def _render_autofill_session(view: DashboardJobView) -> None:
     """Render sanitized Phase 8 metadata; reads never resolve or mutate artifacts."""
     st.subheader("Controlled field entry")
@@ -438,7 +450,11 @@ def main() -> None:
     with materials:
         render_materials(selected)
     with history:
-        render_audit(data.workspace, selected.record.job_key)
+        render_audit_timeline(
+            data.workspace,
+            selected.record.job_key,
+            _configured_audit_timeline_service(),
+        )
     _render_controls(workspace_path, selected)
     _render_autofill_session(selected)
 
