@@ -33,4 +33,8 @@ Microsoft/Windows/PowerShell/ModuleAnalysisCache
 
 # Application-generated data
 data/generated/
-logs/.ruff_cache/
+logs/
+workflow_checkpoints/
+autofill_sessions/
+autofill_workflow_checkpoints/
+*.temporary

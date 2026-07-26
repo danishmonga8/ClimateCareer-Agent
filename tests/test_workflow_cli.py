@@ -34,11 +34,12 @@ def test_require_file_rejects_missing_file(
     with pytest.raises(
         workflow_cli.WorkflowError,
         match="Candidate CV was not found",
-    ):
+    ) as error:
         workflow_cli.require_file(
             missing_file,
             "Candidate CV",
         )
+    assert str(missing_file) not in str(error.value)
 
 
 def test_run_step_rejects_failed_command(
@@ -145,16 +146,10 @@ def test_complete_workflow_runs_phase_one_stages(
     workflow_cli.run_workflow(args)
 
     assert len(recorded_steps) == 4
-    assert recorded_steps[0][0] == (
-        "Candidate profile and evidence generation"
-    )
+    assert recorded_steps[0][0] == ("Candidate profile and evidence generation")
     assert recorded_steps[1][0] == "Job-description parsing"
-    assert recorded_steps[2][0] == (
-        "Candidate-job relevance scoring"
-    )
-    assert recorded_steps[3][0] == (
-        "Recommendation-report generation"
-    )
+    assert recorded_steps[2][0] == ("Candidate-job relevance scoring")
+    assert recorded_steps[3][0] == ("Recommendation-report generation")
     assert args.job_url in recorded_steps[1][1]
     assert "--pure-ai-role" in recorded_steps[2][1]
 
@@ -239,9 +234,7 @@ def test_personalization_runs_as_optional_fifth_stage(
 
     assert len(recorded_steps) == 5
     assert recorded_steps[-1][0] == "Application personalization"
-    assert recorded_steps[-1][1][0].endswith(
-        "personalization_cli.py"
-    )
+    assert recorded_steps[-1][1][0].endswith("personalization_cli.py")
     assert "--questions" in recorded_steps[-1][1]
     assert str(questions_path.resolve()) in recorded_steps[-1][1]
 
@@ -348,9 +341,7 @@ def test_begin_review_runs_after_personalization(
     assert review_command[0].endswith("review_cli.py")
     assert review_command[1] == "begin"
     assert "--application" in review_command
-    assert str(
-        private_dir / "personalized_application.json"
-    ) in review_command
+    assert str(private_dir / "personalized_application.json") in review_command
 
 
 def test_begin_review_requires_personalization(

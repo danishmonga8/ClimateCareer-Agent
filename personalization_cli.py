@@ -27,7 +27,6 @@ from app.services.profile_service import (
     load_candidate_profile,
 )
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s | %(message)s",
@@ -44,8 +43,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     """Create command-line arguments for application personalization."""
     parser = argparse.ArgumentParser(
         description=(
-            "Create an evidence-backed resume, cover letter, "
-            "and draft application answers."
+            "Create an evidence-backed resume, cover letter, and draft application answers."
         )
     )
     parser.add_argument(
@@ -69,17 +67,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--questions",
         type=Path,
-        help=(
-            "Optional UTF-8 JSON file containing an array of "
-            "application-question strings."
-        ),
+        help=("Optional UTF-8 JSON file containing an array of application-question strings."),
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path(
-            "documents/private/personalized_application.json"
-        ),
+        default=Path("documents/private/personalized_application.json"),
         help="Private JSON destination for the application draft.",
     )
     return parser
@@ -93,31 +86,20 @@ def _load_application_questions(path: Path | None) -> list[str]:
     resolved_path = path.expanduser().resolve()
 
     if not resolved_path.is_file():
-        raise PersonalizationInputError(
-            f"Application-question file does not exist: {resolved_path}"
-        )
+        raise PersonalizationInputError("Application-question file does not exist.")
 
     try:
-        payload = json.loads(
-            resolved_path.read_text(encoding="utf-8")
-        )
+        payload = json.loads(resolved_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise PersonalizationInputError(
             "Unable to read valid application-question JSON."
         ) from error
 
     if not isinstance(payload, list):
-        raise PersonalizationInputError(
-            "Application questions must be supplied as a JSON array."
-        )
+        raise PersonalizationInputError("Application questions must be supplied as a JSON array.")
 
-    if any(
-        not isinstance(question, str) or not question.strip()
-        for question in payload
-    ):
-        raise PersonalizationInputError(
-            "Every application question must be a non-empty string."
-        )
+    if any(not isinstance(question, str) or not question.strip() for question in payload):
+        raise PersonalizationInputError("Every application question must be a non-empty string.")
 
     return [question.strip() for question in payload]
 
@@ -128,13 +110,9 @@ def main(arguments: Sequence[str] | None = None) -> int:
     parsed_arguments = parser.parse_args(arguments)
 
     try:
-        questions = _load_application_questions(
-            parsed_arguments.questions
-        )
+        questions = _load_application_questions(parsed_arguments.questions)
         profile = load_candidate_profile(parsed_arguments.profile)
-        evidence_bank = load_evidence_bank(
-            parsed_arguments.evidence
-        )
+        evidence_bank = load_evidence_bank(parsed_arguments.evidence)
         job = load_job_description(parsed_arguments.job)
 
         application = personalize_application(
@@ -143,7 +121,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
             job=job,
             application_questions=questions,
         )
-        saved_path = save_personalized_application(
+        save_personalized_application(
             application,
             parsed_arguments.output,
         )
@@ -154,14 +132,11 @@ def main(arguments: Sequence[str] | None = None) -> int:
         JobStorageError,
         PersonalizationError,
         ApplicationStorageError,
-    ) as error:
-        logger.error("Application personalization failed: %s", error)
+    ):
+        logger.error("Application personalization failed. Check the local inputs and try again.")
         return 1
 
     logger.info("Application personalization completed.")
-    logger.info("Candidate: %s", application.candidate_name)
-    logger.info("Company: %s", application.employer)
-    logger.info("Role: %s", application.job_title)
     logger.info("Resume claims: %d", len(application.resume.claims))
     logger.info(
         "Cover-letter claims: %d",
@@ -176,7 +151,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
         len(application.review_items),
     )
     logger.info("Status: %s", application.status.value)
-    logger.info("Private application saved to: %s", saved_path)
+    logger.info("Private application draft recorded locally.")
 
     return 0
 

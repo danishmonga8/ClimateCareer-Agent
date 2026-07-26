@@ -14,8 +14,11 @@ from app.services.application_review_service import (
     resolve_application_answer,
     resolve_review_item,
 )
-from app.services.dashboard_repository import save_updated_dashboard_workspace
-from app.services.dashboard_review_service import apply_dashboard_decision
+from app.services.dashboard_repository import (
+    DashboardStorageError,
+    save_updated_dashboard_workspace,
+)
+from app.services.dashboard_review_service import DashboardReviewError, apply_dashboard_decision
 from app.services.personalization_repository import (
     ApplicationStorageError,
     load_personalized_application,
@@ -26,8 +29,8 @@ from app.services.quality_control_service import (
     QualityStatus,
     check_review_quality,
 )
-from app.workflows.orchestration import WorkflowOrchestrator
-from app.workflows.repository import find_workflow_for_job
+from app.workflows.orchestration import WorkflowOrchestrationError, WorkflowOrchestrator
+from app.workflows.repository import WorkflowCheckpointError, find_workflow_for_job
 from app.workflows.state import WorkflowDecision
 
 
@@ -139,24 +142,17 @@ def _print_status(
         answer for answer in application.application_answers if answer.requires_confirmation
     ]
 
-    print(f"Candidate: {application.candidate_name}")
-    print(f"Job title: {application.job_title}")
-    print(f"Employer: {application.employer}")
     print(f"Status: {application.status.value}")
     print(f"Review items: {len(application.review_items)}")
     print(f"Unresolved review items: {len(unresolved_items)}")
     print(f"Unconfirmed answers: {len(unconfirmed_answers)}")
 
     if application.user_approval_note:
-        print(f"Approval note: {application.user_approval_note}")
-
-    for index, answer in enumerate(application.application_answers):
-        if answer.requires_confirmation:
-            print(f"Question requiring confirmation [{index}]: {answer.question}")
-
-    for item in unresolved_items:
-        print(f"Unresolved field: {item.field_path}")
-        print(f"Reason: {item.reason}")
+        print("Review note recorded: yes")
+    if unconfirmed_answers:
+        print("Human confirmation is required for one or more application answers.")
+    if unresolved_items:
+        print("One or more review items require resolution.")
 
 
 def _print_quality_report(report) -> None:
@@ -178,7 +174,7 @@ def _save_application(
         application,
         application_path,
     )
-    print(f"Application saved: {application_path}")
+    print("Application review state saved locally.")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -289,9 +285,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (
         ApplicationReviewError,
         ApplicationStorageError,
+        DashboardReviewError,
+        DashboardStorageError,
         QualityControlError,
+        WorkflowCheckpointError,
+        WorkflowOrchestrationError,
     ) as error:
-        print(f"Application review failed: {error}", file=sys.stderr)
+        del error
+        print(
+            "Application review failed. Reload the local review state and try again.",
+            file=sys.stderr,
+        )
         return 1
 
 

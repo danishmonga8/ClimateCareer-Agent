@@ -35,9 +35,7 @@ def save_scoring_result(
             encoding="utf-8",
         )
     except OSError as error:
-        raise ScoringStorageError(
-            f"Unable to save scoring result: {path}"
-        ) from error
+        raise ScoringStorageError("Unable to save scoring result.") from error
 
     return path
 
@@ -50,13 +48,9 @@ def load_scoring_result(
     _validate_json_path(path)
 
     if not path.is_file():
-        raise ScoringStorageError(f"Scoring result does not exist: {path}")
+        raise ScoringStorageError("Scoring result does not exist.")
 
     try:
-        return JobRelevanceScore.model_validate_json(
-            path.read_text(encoding="utf-8")
-        )
+        return JobRelevanceScore.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, ValidationError) as error:
-        raise ScoringStorageError(
-            f"Unable to load a valid scoring result: {path}"
-        ) from error
+        raise ScoringStorageError("Unable to load a valid scoring result.") from error

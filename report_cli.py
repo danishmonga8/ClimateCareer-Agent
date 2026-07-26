@@ -9,9 +9,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from app.services.recommendation_report import save_recommendation_report
-from app.services.scoring_repository import load_scoring_result
-
+from app.services.recommendation_report import (
+    RecommendationReportError,
+    save_recommendation_report,
+)
+from app.services.scoring_repository import ScoringStorageError, load_scoring_result
 
 DEFAULT_INPUT_PATH = Path("documents/private/scoring_result.json")
 DEFAULT_OUTPUT_PATH = Path("documents/private/recommendation_report.md")
@@ -75,24 +77,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.output,
         )
 
-        company = get_field(scoring_result, "company")
-        role = get_field(scoring_result, "job_title")
         overall_score = float(get_field(scoring_result, "overall_score"))
-        recommendation = display_value(
-            get_field(scoring_result, "recommendation")
-        )
+        recommendation = display_value(get_field(scoring_result, "recommendation"))
 
         LOGGER.info("Recommendation report generated successfully.")
-        LOGGER.info("Company: %s", company)
-        LOGGER.info("Role: %s", role)
         LOGGER.info("Overall score: %.2f/100", overall_score)
         LOGGER.info("Recommendation: %s", recommendation)
-        LOGGER.info("Private report saved to: %s", args.output.resolve())
+        LOGGER.info("Private recommendation report recorded locally.")
 
         return 0
 
-    except Exception as exc:
-        LOGGER.error("Unable to generate recommendation report: %s", exc)
+    except (RecommendationReportError, ScoringStorageError):
+        LOGGER.error(
+            "Unable to generate recommendation report. Check the local scoring artifact and try again."
+        )
         return 1
 
 

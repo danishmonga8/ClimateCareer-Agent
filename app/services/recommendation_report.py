@@ -20,10 +20,7 @@ def _bullet_lines(items: list[str]) -> list[str]:
     if not items:
         return ["- None reported."]
 
-    return [
-        f"- {_clean_text(item)}"
-        for item in items
-    ]
+    return [f"- {_clean_text(item)}" for item in items]
 
 
 def render_recommendation_report(
@@ -50,9 +47,7 @@ def render_recommendation_report(
     for component in result.components:
         category = component.category.value.replace("_", " ").title()
         lines.append(
-            f"| {category} | "
-            f"{component.awarded_points:.2f} | "
-            f"{component.maximum_points:.2f} |"
+            f"| {category} | {component.awarded_points:.2f} | {component.maximum_points:.2f} |"
         )
 
     lines.extend(
@@ -140,9 +135,7 @@ def save_recommendation_report(
 ) -> Path:
     """Save a Markdown report using an atomic file replacement."""
     resolved_path = output_path.expanduser().resolve()
-    temporary_path = resolved_path.with_name(
-        f"{resolved_path.name}.temporary"
-    )
+    temporary_path = resolved_path.with_name(f"{resolved_path.name}.temporary")
 
     try:
         resolved_path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,8 +146,6 @@ def save_recommendation_report(
         temporary_path.replace(resolved_path)
     except OSError as error:
         temporary_path.unlink(missing_ok=True)
-        raise RecommendationReportError(
-            f"Could not save recommendation report to {resolved_path}."
-        ) from error
+        raise RecommendationReportError("Could not save recommendation report.") from error
 
     return resolved_path

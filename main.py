@@ -22,7 +22,6 @@ from app.services.profile_service import (
     save_candidate_profile,
 )
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s | %(message)s",
@@ -74,18 +73,13 @@ def main(arguments: Sequence[str] | None = None) -> int:
 
     try:
         parsed_cv = parse_cv(parsed_arguments.cv)
-    except DocumentParsingError as error:
-        logger.error("CV processing failed: %s", error)
+    except DocumentParsingError:
+        logger.error("CV processing failed. Check the local document and try again.")
         return 1
 
     logger.info("CV validated and parsed successfully.")
-    logger.info("File: %s", parsed_cv.filename)
     logger.info("Pages: %d", parsed_cv.page_count)
     logger.info("Extracted characters: %d", len(parsed_cv.text))
-    logger.info(
-        "Document fingerprint: %s...",
-        parsed_cv.sha256_digest[:12],
-    )
 
     profile = None
 
@@ -97,19 +91,23 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 cv_text=parsed_cv.text,
                 source_document=parsed_cv.filename,
             )
-            saved_path = save_candidate_profile(
+            save_candidate_profile(
                 profile,
                 parsed_arguments.output,
             )
-        except CandidateExtractionError as error:
-            logger.error("Candidate extraction failed: %s", error)
+        except CandidateExtractionError:
+            logger.error(
+                "Candidate extraction failed. Check local model configuration and try again."
+            )
             return 1
-        except ProfileStorageError as error:
-            logger.error("Candidate profile storage failed: %s", error)
+        except ProfileStorageError:
+            logger.error(
+                "Candidate profile storage failed. Check the local destination and try again."
+            )
             return 1
 
         logger.info("Candidate profile extracted and validated.")
-        logger.info("Private profile saved to: %s", saved_path)
+        logger.info("Private profile recorded locally.")
 
     if parsed_arguments.build_evidence:
         logger.info("Starting deterministic evidence-bank generation.")
@@ -123,20 +121,21 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 cv_text=parsed_cv.text,
                 source_sha256=parsed_cv.sha256_digest,
             )
-            evidence_path = save_evidence_bank(
+            save_evidence_bank(
                 evidence_bank,
                 parsed_arguments.evidence_output,
             )
-        except ProfileStorageError as error:
-            logger.error("Candidate profile loading failed: %s", error)
+        except ProfileStorageError:
+            logger.error(
+                "Candidate profile loading failed. Check the local profile artifact and try again."
+            )
             return 1
-        except EvidenceStorageError as error:
-            logger.error("Evidence-bank storage failed: %s", error)
+        except EvidenceStorageError:
+            logger.error("Evidence-bank storage failed. Check the local destination and try again.")
             return 1
 
         verified_count = sum(
-            record.status == EvidenceStatus.VERIFIED
-            for record in evidence_bank.records
+            record.status == EvidenceStatus.VERIFIED for record in evidence_bank.records
         )
         review_count = sum(
             record.status == EvidenceStatus.REQUIRES_CONFIRMATION
@@ -146,7 +145,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
         logger.info("Evidence bank generated successfully.")
         logger.info("Verified evidence records: %d", verified_count)
         logger.info("Records requiring confirmation: %d", review_count)
-        logger.info("Private evidence bank saved to: %s", evidence_path)
+        logger.info("Private evidence bank recorded locally.")
 
     return 0
 

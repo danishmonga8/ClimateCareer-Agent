@@ -34,7 +34,7 @@ def save_discovery_snapshot(
         temporary_path.replace(path)
     except OSError as error:
         temporary_path.unlink(missing_ok=True)
-        raise DiscoveryStorageError(f"Unable to save discovery snapshot: {path}") from error
+        raise DiscoveryStorageError("Unable to save discovery snapshot.") from error
 
     return path
 
@@ -45,9 +45,9 @@ def load_discovery_snapshot(input_path: str | Path) -> DiscoverySnapshot:
     _validate_json_path(path)
 
     if not path.is_file():
-        raise DiscoveryStorageError(f"Discovery snapshot does not exist: {path}")
+        raise DiscoveryStorageError("Discovery snapshot does not exist.")
 
     try:
         return DiscoverySnapshot.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, ValidationError) as error:
-        raise DiscoveryStorageError(f"Unable to load a valid discovery snapshot: {path}") from error
+        raise DiscoveryStorageError("Unable to load a valid discovery snapshot.") from error

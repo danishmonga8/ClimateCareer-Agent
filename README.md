@@ -4,7 +4,9 @@ ClimateCareer-Agent is a human-supervised AI system for evaluating climate, envi
 
 It converts a candidate CV into structured, traceable evidence; parses job descriptions; calculates an explainable relevance score; and generates private recommendation and application-personalization outputs.
 
-The system does not submit applications automatically. Personalization, review, approval, and final application decisions remain under human control.
+The system does not submit applications automatically. Personalization, review,
+approval, controlled local field entry, and final application decisions remain
+under human control.
 
 ## Core principles
 
@@ -15,6 +17,8 @@ The system does not submit applications automatically. Personalization, review, 
 - Route uncertain and sensitive information to human review.
 - Require explicit human approval.
 - Exclude automatic job-application submission.
+- Keep command-line status and recovery output free of private artifact paths,
+  review-note text, reviewer labels, and application content.
 
 ## Phase 1 capabilities
 
@@ -64,10 +68,18 @@ The system does not submit applications automatically. Personalization, review, 
 8. Optionally generate personalized application documents.
 9. Optionally begin structured human review.
 10. Resolve uncertain answers and other review items.
-11. Approve the application explicitly when all review items are resolved.
-12. Complete any external application manually.
+11. Run the current local quality gate and record internal approval only when
+    all review items are resolved.
+12. Optionally prepare a controlled local field-entry session through an
+    explicitly configured fictional/mock adapter.
+13. Confirm that specific session, then separately confirm the exact selected
+    field identifiers before any local population status is recorded.
+14. Review populated fields manually in the external target context.
+15. Use the selected-job audit timeline to inspect sanitized local history.
+16. Complete any external application manually, outside this system.
 
-ClimateCareer-Agent stops at approval. It does not submit the application.
+ClimateCareer-Agent stops before external application action. Internal approval
+and any mock-only local field-entry status never submit the application.
 
 ## Installation
 
@@ -91,17 +103,23 @@ py -3.12 -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-### 4. Create the private configuration file
+### 4. Create the private configuration file for optional live model commands
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-### 5. Configure the OpenAI API key
+### 5. Configure the OpenAI API key only when using live model commands
 
 Add the real OpenAI API key only to `.env`.
 
 Never place the API key directly in source code, test files, command history, or committed configuration.
+
+The local dashboard, review, quality-control, workflow, controlled field-entry,
+audit-timeline, and offline test paths do not call the OpenAI API. The original
+profile-extraction, job-parsing, scoring, and personalization commands use a
+configured model only when a user explicitly invokes them. The repository's
+offline verification uses fictional fixtures and mocked model responses.
 
 ## Phase 1 usage
 
@@ -188,16 +206,34 @@ python review_cli.py resolve-answer --help
 python review_cli.py resolve-item --help
 ```
 
-These help commands display the required item identifiers and resolution arguments supported by the current CLI.
+The status command intentionally shows only safe counts and generic indicators.
+Inspect the private application artifact locally to identify a review-item field
+path or question index before using a resolution command; those private details
+are never echoed by the CLI.
 
 ### Approve the application
 
-After every required review item has been resolved:
+After every required review item has been resolved, use the authoritative
+workspace-based approval command. The legacy application-only approval command
+is intentionally unsupported:
 
 ```powershell
 python review_cli.py approve `
-    --application .\documents\private\personalized_application.json
+    --workspace .\documents\private\dashboard_workspace.json `
+    --job-key "manual:example-board:example-job-001" `
+    --expected-revision 0 `
+    --reviewer-label "Local reviewer" `
+    --confirm `
+    --evidence .\documents\private\evidence_bank.json `
+    --approval-note "Internal approval recorded."
 ```
+
+Use `--workflow-checkpoints .\documents\private\workflow_checkpoints` when
+the selected review is workflow-enabled. `review_cli.py quality-check` accepts
+the same workspace, job, revision, and evidence context and returns `0` for
+PASS or WARNING, `3` for BLOCKED, and `2` for invalid command input. Approval
+always recomputes the quality report from freshly loaded authoritative artifacts;
+a prior PASS result is never authorization.
 
 Approval fails when:
 
@@ -334,7 +370,12 @@ personalized_application.json
 discovered_jobs.json
 ```
 
-These files can contain personal, professional, scoring, and application information and must never be committed.
+These files can contain personal, professional, scoring, and application
+information and must never be committed. Keep any configured workflow
+checkpoints, autofill sessions, audit records, and private artifact registries
+under an ignored private directory as well. CLI success and recovery output
+deliberately reports only local status and counts, not private locations or
+content.
 
 ## Application-question format
 
@@ -434,9 +475,7 @@ available. Streamlit refreshes never start graph nodes automatically. This
 orchestration records internal approval only: it has no submission node,
 external-action route, browser action, upload, email, or autofill capability.
 
-## Quality checks
-
-## Phase 7 quality control
+## Quality control
 
 `review_cli.py quality-check` reports **PASS**, **WARNING**, or **BLOCKED** using
 sanitized finding codes and recovery guidance. PASS and WARNING exit `0`;
@@ -528,6 +567,26 @@ The audit view is local/offline and has no export or download, retention or
 deletion automation, cryptographic tamper-evidence, browser, upload, email,
 authentication, external-service, or submission capability.
 
+## Local/offline v1 scope
+
+The documented local/offline v1 scope is complete when used with existing local
+artifacts or the supplied fictional, mocked test fixtures. It provides a
+connected human-controlled journey from local artifact review through
+quality-gated internal approval, optional mock-only controlled field entry,
+mandatory manual review, and sanitized selected-job audit visibility.
+
+All stateful local controls use stable job identity, expected revisions,
+material-version and evidence compatibility, fresh validation, append-only
+authoritative audit sources, reference-only snapshots, and idempotent retries.
+Dashboard rendering, status inspection, filters, pagination, and refresh are
+read-only. Recovery messages are sanitized and direct the user to reload the
+relevant local state rather than exposing a private path or raw exception.
+
+The mock adapter records local field-population status only. It never opens or
+controls a browser, and every populated field still requires manual human review
+in its target context. No component interprets approval or local population as
+an application submission.
+
 ### Lint
 
 ```powershell
@@ -578,6 +637,8 @@ Never commit:
 - Personalized applications
 - Application-question answers
 - Human-review decisions containing private information
+- Private workflow checkpoints, session records, audit records, or artifact
+  registries
 
 Before committing, always inspect:
 
@@ -601,8 +662,14 @@ It must not:
 - Automate LinkedIn Easy Apply or any other application submission.
 - Replace final human judgment.
 
-## Planned development
+## Optional future enhancements
 
-- No later roadmap item is currently documented.
+No later required roadmap item is currently documented. The following are
+deliberately outside local/offline v1 and require separate design and approval:
 
-Any future autofill capability must remain human-supervised and must not introduce automatic submission.
+- A real browser or target adapter, if ever considered, with an independent
+  safety review; it must not introduce automatic submission.
+- Audit export/download, retention or deletion automation, or cryptographic
+  tamper-evidence.
+- Any live external integration beyond an explicitly user-invoked existing
+  model or public-discovery command.

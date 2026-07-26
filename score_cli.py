@@ -24,7 +24,6 @@ from app.services.scoring_repository import (
     save_scoring_result,
 )
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s | %(message)s",
@@ -85,14 +84,10 @@ def main(arguments: Sequence[str] | None = None) -> int:
         job = load_job_description(parsed_arguments.job)
 
         if evidence_bank.candidate_name != profile.full_name:
-            raise ScoringInputError(
-                "Evidence bank and candidate profile names do not match."
-            )
+            raise ScoringInputError("Evidence bank and candidate profile names do not match.")
 
         if evidence_bank.source_document != profile.source_document:
-            raise ScoringInputError(
-                "Evidence bank and profile source documents do not match."
-            )
+            raise ScoringInputError("Evidence bank and profile source documents do not match.")
 
         result = score_job_relevance(
             profile=profile,
@@ -100,7 +95,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
             job=job,
             pure_ai_role=parsed_arguments.pure_ai_role,
         )
-        saved_path = save_scoring_result(
+        save_scoring_result(
             result,
             parsed_arguments.output,
         )
@@ -111,13 +106,11 @@ def main(arguments: Sequence[str] | None = None) -> int:
         ScoringStorageError,
         ScoringInputError,
         JobScoringError,
-    ) as error:
-        logger.error("Job scoring failed: %s", error)
+    ):
+        logger.error("Job scoring failed. Check the local inputs and try again.")
         return 1
 
     logger.info("Job relevance scoring completed.")
-    logger.info("Company: %s", result.company)
-    logger.info("Role: %s", result.job_title)
     logger.info("Overall score: %.2f/100", result.overall_score)
     logger.info("Recommendation: %s", result.recommendation.value)
     logger.info("Confidence: %.2f", result.confidence_score)
@@ -131,12 +124,10 @@ def main(arguments: Sequence[str] | None = None) -> int:
         )
 
     failed_constraints = [
-        check
-        for check in result.hard_constraints
-        if check.status == HardConstraintStatus.FAILED
+        check for check in result.hard_constraints if check.status == HardConstraintStatus.FAILED
     ]
     logger.info("Hard eligibility failures: %d", len(failed_constraints))
-    logger.info("Private scoring result saved to: %s", saved_path)
+    logger.info("Private scoring result recorded locally.")
 
     return 0
 

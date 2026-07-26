@@ -138,10 +138,17 @@ def test_status_displays_application_review_state(
     assert "Status: draft" in output
     assert "Unresolved review items: 1" in output
     assert "Unconfirmed answers: 1" in output
+    assert "Human confirmation is required" in output
+    assert "Sample Candidate" not in output
+    assert "Environmental Data Scientist" not in output
+    assert "Example Climate Company" not in output
+    assert "What is your expected salary?" not in output
+    assert "candidate must confirm" not in output
 
 
 def test_begin_command_starts_human_review(
     tmp_path: Path,
+    capsys,
 ) -> None:
     """The begin command should persist needs-review status."""
     application_path = save_application(
@@ -160,9 +167,12 @@ def test_begin_command_starts_human_review(
     saved_application = load_personalized_application(
         application_path,
     )
+    output = capsys.readouterr().out
 
     assert exit_code == 0
     assert saved_application.status == ApplicationStatus.NEEDS_REVIEW
+    assert "Application review state saved locally." in output
+    assert str(application_path) not in output
 
 
 def test_resolve_answer_command_confirms_answer(
@@ -324,3 +334,4 @@ def test_missing_application_returns_nonzero(
 
     assert exit_code == 1
     assert "Application review failed" in error_output
+    assert str(missing_path) not in error_output

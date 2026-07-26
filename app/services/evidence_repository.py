@@ -32,9 +32,7 @@ def save_evidence_bank(
             encoding="utf-8",
         )
     except OSError as error:
-        raise EvidenceStorageError(
-            f"Unable to save evidence bank: {path}"
-        ) from error
+        raise EvidenceStorageError("Unable to save evidence bank.") from error
 
     return path
 
@@ -45,13 +43,9 @@ def load_evidence_bank(input_path: str | Path) -> EvidenceBank:
     _validate_json_path(path)
 
     if not path.is_file():
-        raise EvidenceStorageError(f"Evidence bank does not exist: {path}")
+        raise EvidenceStorageError("Evidence bank does not exist.")
 
     try:
-        return EvidenceBank.model_validate_json(
-            path.read_text(encoding="utf-8")
-        )
+        return EvidenceBank.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, ValidationError) as error:
-        raise EvidenceStorageError(
-            f"Unable to load a valid evidence bank: {path}"
-        ) from error
+        raise EvidenceStorageError("Unable to load a valid evidence bank.") from error

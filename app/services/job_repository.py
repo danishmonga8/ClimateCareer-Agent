@@ -32,9 +32,7 @@ def save_job_description(
             encoding="utf-8",
         )
     except OSError as error:
-        raise JobStorageError(
-            f"Unable to save structured job: {path}"
-        ) from error
+        raise JobStorageError("Unable to save structured job.") from error
 
     return path
 
@@ -45,13 +43,9 @@ def load_job_description(input_path: str | Path) -> JobDescription:
     _validate_json_path(path)
 
     if not path.is_file():
-        raise JobStorageError(f"Structured job does not exist: {path}")
+        raise JobStorageError("Structured job does not exist.")
 
     try:
-        return JobDescription.model_validate_json(
-            path.read_text(encoding="utf-8")
-        )
+        return JobDescription.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, ValidationError) as error:
-        raise JobStorageError(
-            f"Unable to load a valid structured job: {path}"
-        ) from error
+        raise JobStorageError("Unable to load a valid structured job.") from error

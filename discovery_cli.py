@@ -109,14 +109,14 @@ def main(arguments: Sequence[str] | None = None) -> int:
     try:
         jobs = _collect_jobs(args)
         snapshot = build_discovery_snapshot([jobs], criteria=criteria)
-        saved_path = save_discovery_snapshot(snapshot, args.output)
-    except (JobCollectorError, DiscoveryStorageError) as error:
-        logger.error("Job discovery failed: %s", error)
+        save_discovery_snapshot(snapshot, args.output)
+    except (JobCollectorError, DiscoveryStorageError):
+        logger.error("Job discovery failed. Check the local configuration and try again.")
         return 1
 
     logger.info("Collected public listings: %d", len(jobs))
     logger.info("Listings retained after filtering and deduplication: %d", len(snapshot.jobs))
-    logger.info("Private discovery snapshot saved to: %s", saved_path)
+    logger.info("Private discovery snapshot recorded locally.")
     return 0
 
 

@@ -29,11 +29,7 @@ class ParsedDocument:
 
 def _clean_extracted_text(text: str) -> str:
     """Remove null characters and unnecessary surrounding whitespace."""
-    cleaned_lines = [
-        line.strip()
-        for line in text.replace("\x00", "").splitlines()
-        if line.strip()
-    ]
+    cleaned_lines = [line.strip() for line in text.replace("\x00", "").splitlines() if line.strip()]
     return "\n".join(cleaned_lines)
 
 
@@ -49,9 +45,7 @@ def _extract_pdf_text(document: ValidatedDocument) -> tuple[str, int]:
     except DocumentParsingError:
         raise
     except Exception as error:
-        raise DocumentParsingError(
-            f"Unable to read PDF: {document.filename}"
-        ) from error
+        raise DocumentParsingError("Unable to read the PDF document.") from error
 
 
 def _extract_docx_text(document: ValidatedDocument) -> tuple[str, int]:
@@ -68,9 +62,7 @@ def _extract_docx_text(document: ValidatedDocument) -> tuple[str, int]:
 
         return "\n".join(content), 1
     except Exception as error:
-        raise DocumentParsingError(
-            f"Unable to read DOCX: {document.filename}"
-        ) from error
+        raise DocumentParsingError("Unable to read the DOCX document.") from error
 
 
 def parse_cv(document_path: str | Path) -> ParsedDocument:
@@ -85,16 +77,12 @@ def parse_cv(document_path: str | Path) -> ParsedDocument:
     elif document.extension == ".docx":
         raw_text, page_count = _extract_docx_text(document)
     else:
-        raise DocumentParsingError(
-            f"Unsupported document type: {document.extension}"
-        )
+        raise DocumentParsingError(f"Unsupported document type: {document.extension}")
 
     cleaned_text = _clean_extracted_text(raw_text)
 
     if not cleaned_text:
-        raise DocumentParsingError(
-            "No readable text was found. The document may be image-based."
-        )
+        raise DocumentParsingError("No readable text was found. The document may be image-based.")
 
     return ParsedDocument(
         filename=document.filename,

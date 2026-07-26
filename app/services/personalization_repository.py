@@ -14,9 +14,7 @@ class ApplicationStorageError(ValueError):
 def _validate_json_path(path: Path) -> None:
     """Require JSON storage for personalized applications."""
     if path.suffix.lower() != ".json":
-        raise ApplicationStorageError(
-            "Personalized applications must use a .json file."
-        )
+        raise ApplicationStorageError("Personalized applications must use a .json file.")
 
 
 def save_personalized_application(
@@ -34,9 +32,7 @@ def save_personalized_application(
             encoding="utf-8",
         )
     except OSError as error:
-        raise ApplicationStorageError(
-            f"Unable to save personalized application: {path}"
-        ) from error
+        raise ApplicationStorageError("Unable to save personalized application.") from error
 
     return path
 
@@ -49,15 +45,9 @@ def load_personalized_application(
     _validate_json_path(path)
 
     if not path.is_file():
-        raise ApplicationStorageError(
-            f"Personalized application does not exist: {path}"
-        )
+        raise ApplicationStorageError("Personalized application does not exist.")
 
     try:
-        return PersonalizedApplication.model_validate_json(
-            path.read_text(encoding="utf-8")
-        )
+        return PersonalizedApplication.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, ValidationError) as error:
-        raise ApplicationStorageError(
-            f"Unable to load a valid personalized application: {path}"
-        ) from error
+        raise ApplicationStorageError("Unable to load a valid personalized application.") from error

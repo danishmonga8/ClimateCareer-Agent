@@ -11,7 +11,6 @@ from app.services.job_repository import (
     save_job_description,
 )
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s | %(message)s",
@@ -22,9 +21,7 @@ logger = logging.getLogger(__name__)
 
 def create_argument_parser() -> argparse.ArgumentParser:
     """Create command-line arguments for manual job parsing."""
-    parser = argparse.ArgumentParser(
-        description="Parse a manually supplied job description."
-    )
+    parser = argparse.ArgumentParser(description="Parse a manually supplied job description.")
     parser.add_argument(
         "--file",
         type=Path,
@@ -55,16 +52,12 @@ def _read_job_text(path: Path) -> str:
     resolved_path = path.expanduser().resolve()
 
     if not resolved_path.is_file():
-        raise JobParsingError(
-            f"Job-description file does not exist: {resolved_path}"
-        )
+        raise JobParsingError("Job-description file does not exist.")
 
     try:
         text = resolved_path.read_text(encoding="utf-8")
     except OSError as error:
-        raise JobParsingError(
-            f"Unable to read job-description file: {resolved_path}"
-        ) from error
+        raise JobParsingError("Unable to read job-description file.") from error
 
     if not text.strip():
         raise JobParsingError("Job-description file is empty.")
@@ -84,20 +77,18 @@ def main(arguments: Sequence[str] | None = None) -> int:
             job_url=parsed_arguments.url,
             source=parsed_arguments.source,
         )
-        saved_path = save_job_description(
+        save_job_description(
             job,
             parsed_arguments.output,
         )
-    except JobParsingError as error:
-        logger.error("Job parsing failed: %s", error)
+    except JobParsingError:
+        logger.error("Job parsing failed. Check the local job input and try again.")
         return 1
-    except JobStorageError as error:
-        logger.error("Job storage failed: %s", error)
+    except JobStorageError:
+        logger.error("Job storage failed. Check the local destination and try again.")
         return 1
 
     logger.info("Job description parsed and validated.")
-    logger.info("Company: %s", job.company)
-    logger.info("Role: %s", job.title)
     logger.info(
         "Mandatory requirements: %d",
         len(job.mandatory_requirements),
@@ -106,7 +97,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
         "Preferred requirements: %d",
         len(job.preferred_requirements),
     )
-    logger.info("Structured job saved to: %s", saved_path)
+    logger.info("Structured job recorded locally.")
 
     return 0
 

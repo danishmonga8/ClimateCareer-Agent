@@ -7,7 +7,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent
 PRIVATE_DIR = PROJECT_ROOT / "documents" / "private"
 
@@ -19,7 +18,7 @@ class WorkflowError(RuntimeError):
 def require_file(path: Path, description: str) -> None:
     """Confirm that a required file exists."""
     if not path.is_file():
-        raise WorkflowError(f"{description} was not found: {path}")
+        raise WorkflowError(f"{description} was not found.")
 
 
 def run_step(step_name: str, command: list[str]) -> None:
@@ -33,9 +32,7 @@ def run_step(step_name: str, command: list[str]) -> None:
     )
 
     if result.returncode != 0:
-        raise WorkflowError(
-            f"{step_name} failed with exit code {result.returncode}."
-        )
+        raise WorkflowError(f"{step_name} failed with exit code {result.returncode}.")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -68,10 +65,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--pure-ai-role",
         action="store_true",
-        help=(
-            "Apply the scoring configuration for a primarily "
-            "AI-focused role."
-        ),
+        help=("Apply the scoring configuration for a primarily AI-focused role."),
     )
     parser.add_argument(
         "--personalize",
@@ -93,10 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--questions",
         type=Path,
-        help=(
-            "Optional JSON array of application questions. "
-            "Requires --personalize."
-        ),
+        help=("Optional JSON array of application questions. Requires --personalize."),
     )
 
     return parser
@@ -110,15 +101,11 @@ def run_workflow(args: argparse.Namespace) -> None:
     questions_path = None
 
     if args.begin_review and not args.personalize:
-        raise WorkflowError(
-            "--begin-review requires the --personalize option."
-        )
+        raise WorkflowError("--begin-review requires the --personalize option.")
 
     if args.questions is not None:
         if not args.personalize:
-            raise WorkflowError(
-                "--questions requires the --personalize option."
-            )
+            raise WorkflowError("--questions requires the --personalize option.")
 
         questions_path = args.questions.expanduser().resolve()
 
@@ -195,19 +182,13 @@ def run_workflow(args: argparse.Namespace) -> None:
         "Generated recommendation report",
     )
 
-    application_path = (
-        PRIVATE_DIR / "personalized_application.json"
-    )
+    application_path = PRIVATE_DIR / "personalized_application.json"
 
     if args.personalize:
-        personalization_command = [
-            str(PROJECT_ROOT / "personalization_cli.py")
-        ]
+        personalization_command = [str(PROJECT_ROOT / "personalization_cli.py")]
 
         if questions_path is not None:
-            personalization_command.extend(
-                ["--questions", str(questions_path)]
-            )
+            personalization_command.extend(["--questions", str(questions_path)])
 
         run_step(
             "Application personalization",
@@ -235,24 +216,14 @@ def run_workflow(args: argparse.Namespace) -> None:
             "Application under human review",
         )
 
-    print("\n=== WORKFLOW COMPLETED SUCCESSFULLY ===")
-    print(
-        "Candidate profile: "
-        f"{PRIVATE_DIR / 'candidate_profile.json'}"
-    )
-    print(f"Evidence bank: {PRIVATE_DIR / 'evidence_bank.json'}")
-    print(f"Structured job: {PRIVATE_DIR / 'structured_job.json'}")
-    print(f"Scoring result: {PRIVATE_DIR / 'scoring_result.json'}")
-    print(f"Recommendation report: {report_path}")
+    print("\n=== LOCAL WORKFLOW COMPLETED ===")
+    print("Private candidate, evidence, job, score, and report artifacts were recorded locally.")
 
     if args.personalize:
-        print(f"Personalized application: {application_path}")
+        print("A private personalized application draft was recorded locally.")
 
     if args.begin_review:
-        print(
-            "Human review started. Explicit approval is still "
-            "required through review_cli.py."
-        )
+        print("Human review started. Explicit approval is still required through review_cli.py.")
 
 
 def main() -> int:

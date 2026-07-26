@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 
-
 ALLOWED_DOCUMENT_EXTENSIONS = {".pdf", ".docx"}
 DEFAULT_MAXIMUM_SIZE_MB = 10
 
@@ -55,10 +54,10 @@ def validate_document(
     path = Path(document_path).expanduser().resolve()
 
     if not path.exists():
-        raise DocumentValidationError(f"Document does not exist: {path}")
+        raise DocumentValidationError("Document does not exist.")
 
     if not path.is_file():
-        raise DocumentValidationError(f"Document path is not a file: {path}")
+        raise DocumentValidationError("Document path is not a file.")
 
     extension = path.suffix.lower()
 
@@ -75,9 +74,7 @@ def validate_document(
     maximum_size_bytes = maximum_size_mb * 1024 * 1024
 
     if size_bytes > maximum_size_bytes:
-        raise DocumentValidationError(
-            f"Document exceeds the {maximum_size_mb} MB size limit."
-        )
+        raise DocumentValidationError(f"Document exceeds the {maximum_size_mb} MB size limit.")
 
     _validate_file_signature(path, extension)
 

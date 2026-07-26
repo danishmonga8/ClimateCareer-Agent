@@ -32,9 +32,7 @@ def save_candidate_profile(
             encoding="utf-8",
         )
     except OSError as error:
-        raise ProfileStorageError(
-            f"Unable to save candidate profile: {path}"
-        ) from error
+        raise ProfileStorageError("Unable to save candidate profile.") from error
 
     return path
 
@@ -45,13 +43,9 @@ def load_candidate_profile(input_path: str | Path) -> CandidateProfile:
     _validate_json_path(path)
 
     if not path.is_file():
-        raise ProfileStorageError(f"Candidate profile does not exist: {path}")
+        raise ProfileStorageError("Candidate profile does not exist.")
 
     try:
-        return CandidateProfile.model_validate_json(
-            path.read_text(encoding="utf-8")
-        )
+        return CandidateProfile.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, ValidationError) as error:
-        raise ProfileStorageError(
-            f"Unable to load a valid candidate profile: {path}"
-        ) from error
+        raise ProfileStorageError("Unable to load a valid candidate profile.") from error

@@ -10,6 +10,7 @@
 - Phase 6: LangGraph Workflow Orchestration completed.
 - Phase 7: Additional Quality-Control and Approval Commands completed.
 - Phase 8: Controlled Application-Field Autofill completed.
+- Expanded audit logging and review visibility completed.
 
 ## Phase 3 delivery
 
@@ -24,7 +25,7 @@
 - Private workspace JSON that references existing artifacts without copying or modifying them.
 - Validated internal approval, rejection, revision, and explicit return-to-review transitions.
 - Optimistic revisions, atomic persistence, append-only audit events, and no-external-action decision paths.
-- “Approved for manual next step” is an internal status only; it does not mean submitted.
+- "Approved for manual next step" is an internal status only; it does not mean submitted.
 
 ## Final validation
 
@@ -206,6 +207,43 @@ human-approval, and no-submission boundaries.
   symlink-permission skip remains conditional).
 - Ruff, formatting, diff, and controlled Streamlit verification: passed.
 
-## Next roadmap item
+## Local/offline v1 completion
 
-No later roadmap item is currently documented.
+The documented local/offline v1 scope is complete. It connects local artifact
+review, quality-gated internal decisions, reference-only workflow resume,
+mock-only controlled field-entry preparation, mandatory manual review after
+local population, and sanitized selected-job audit visibility.
+
+Completion does not expand the product into a hosted service or external
+automation tool. Dashboard loading, refresh, filtering, pagination, checkpoint
+summary, and audit visibility remain read-only. Authoritative review and
+autofill audit sources remain append-only; integrity warnings are sanitized and
+non-blocking. CLI status and recovery output do not expose private artifact
+paths, review-note text, reviewer labels, or application content.
+
+The original model-backed extraction, parsing, scoring, and personalization
+commands remain explicit user-invoked integrations. Offline verification uses
+fictional fixtures and mocked adapters only; no API credit or live service is
+required for the supported local verification path.
+
+## Local/offline v1 validation
+
+- Baseline offline suite before the completion audit: 187 passed, 1 skipped.
+- Completion-focused CLI, dashboard, review, quality, workflow, autofill, audit,
+  repository, and fictional end-to-end regressions: 95 passed.
+- Final complete offline suite: 197 passed, 1 skipped. The skip remains limited
+  to local Windows environments that cannot create a test symlink.
+- Ruff checks, Ruff formatting checks, and diff checks passed. A controlled
+  local Streamlit startup verification passed and left no listener running.
+
+## Optional future enhancements
+
+No later required roadmap item is currently documented. The following are not
+part of local/offline v1 and require separate design and approval:
+
+- A real browser or target adapter; this must not introduce automated
+  submission, upload, email, authentication, or consent behavior.
+- Audit export/download, retention or deletion automation, or cryptographic
+  tamper-evidence.
+- Any additional live external integration beyond explicitly user-invoked
+  existing model or public-discovery commands.
