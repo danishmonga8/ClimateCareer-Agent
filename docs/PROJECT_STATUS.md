@@ -9,6 +9,7 @@
 - Phase 5: Privacy-Safe End-to-End Verification and Integration Hardening completed.
 - Phase 6: LangGraph Workflow Orchestration completed.
 - Phase 7: Additional Quality-Control and Approval Commands completed.
+- Phase 8: Controlled Application-Field Autofill completed.
 
 ## Phase 3 delivery
 
@@ -115,7 +116,57 @@ human-approval, and no-submission boundaries.
 - Routed CLI, dashboard, and LangGraph approval through fresh quality checks.
 - Approval remains internal-only: approved for manual next step is not submitted.
 
+## Phase 8 delivery
+
+- Added typed opaque controller requests and a trusted private-registry boundary:
+  roots are supplied only by external `workspace_id -> approved root`
+  configuration. Registry records bind opaque profile/evidence references to a
+  workspace, kind, internal relative path, and SHA-256 digest only.
+- Resolver validation fails closed for missing trusted roots, malformed or
+  cross-workspace references, wrong kinds, missing/non-regular files,
+  directories, symlinks, path traversal or containment escape, and digest
+  mismatch. Resolved paths and raw values are transient only.
+- Added atomic local, reference-only session and workflow persistence with
+  idempotent sanitized append-only audit identifiers. No values, paths,
+  evidence content, credentials, registry records, or raw exceptions persist.
+- Added fresh authoritative approval, quality, stable-job, revision,
+  material-version, evidence, workflow-checkpoint, and profile-completeness
+  validation before preparation and both confirmations.
+- Added controller-backed LangGraph interrupts before session confirmation,
+  before exact field confirmation, and after population for mandatory manual
+  review. Restart, replay, and resume never auto-confirm or populate.
+- Added a read-only dashboard session view with deliberate start, exact-field,
+  skip, and cancel controls. Refresh reads metadata only; controls resume the
+  existing workflow and rerun fresh gates.
+- Eligible fields are conservative and allow-listed. Ambiguous, sensitive,
+  free-text, authentication, legal, compensation, demographic, reference, and
+  attachment fields remain manual. A populated local field still requires human
+  review and never means submitted.
+- Phase 8 has only fictional offline fixtures and mock/local behavior. It has
+  no browser, upload, download, email, external-service, authentication,
+  payment, consent, Apply, Send, or submission capability.
+
+## Phase 8 known limitations
+
+- No real browser or target adapter is implemented or authorized. An explicit
+  trusted local service injection is required before dashboard controls appear.
+- The profile schema supports only exact deterministic mappings; unsupported
+  location, employment, education, and skill aggregates remain manual.
+- The live LangGraph checkpointer is in memory; sanitized JSON snapshots provide
+  process-restart recovery.
+
+## Phase 8 final validation
+
+- Focused resolver, controller, persistence, audit, workflow, dashboard,
+  quality-control, review-service, CLI, and end-to-end regression tests:
+  58 passed, 1 skipped (the symlink test skips only when Windows does not permit
+  creating a local symlink).
+- Complete offline suite: 173 passed, 1 skipped.
+- Ruff, formatting, diff, and controlled local Streamlit verification: passed.
+- Only fictional offline fixtures and mock/local adapters were used. No browser,
+  upload, download, email, API credit, external service, authentication, or
+  submission capability was used or added.
+
 ## Next roadmap item
 
-Controlled application-field autofill after explicit approval remains future work
-and is not authorized or implemented here.
+Expanded audit logging and review visibility.

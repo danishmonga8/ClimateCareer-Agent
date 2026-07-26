@@ -59,6 +59,7 @@ def check_review_quality(
     *,
     evidence_path: str | Path | None = None,
     workflow_directory: str | Path | None = None,
+    allow_approved_for_manual_next_step: bool = False,
 ) -> QualityReport:
     """Evaluate current local artifacts without mutating them or exposing their content."""
     findings: list[QualityFinding] = []
@@ -86,10 +87,10 @@ def check_review_quality(
                     "Reload before deciding.",
                 )
             )
-        if view.record.status in {
-            DashboardReviewStatus.APPROVED_FOR_MANUAL_NEXT_STEP,
-            DashboardReviewStatus.REJECTED,
-        }:
+        terminal_statuses = {DashboardReviewStatus.REJECTED}
+        if not allow_approved_for_manual_next_step:
+            terminal_statuses.add(DashboardReviewStatus.APPROVED_FOR_MANUAL_NEXT_STEP)
+        if view.record.status in terminal_statuses:
             findings.append(
                 _finding(
                     "TERMINAL_DECISION",
@@ -168,9 +169,13 @@ def check_review_quality(
                     "Restore a compatible local workflow checkpoint.",
                 )
             )
-        elif (
-            workflow["review_revision"] != expected_revision
-            or workflow["stage"] != WorkflowStage.AWAITING_HUMAN_REVIEW
+        elif workflow["review_revision"] != expected_revision or workflow["stage"] not in (
+            {WorkflowStage.AWAITING_HUMAN_REVIEW}
+            if not allow_approved_for_manual_next_step
+            else {
+                WorkflowStage.AWAITING_HUMAN_REVIEW,
+                WorkflowStage.APPROVED_FOR_MANUAL_NEXT_STEP,
+            }
         ):
             findings.append(
                 _finding(

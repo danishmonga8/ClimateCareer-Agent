@@ -446,6 +446,54 @@ BLOCKED exits `3`; invalid command input exits `2`. Internal approval now requir
 approval invocation is intentionally unsupported. Approval remains only
 **Approved for manual next step** and never submits an application.
 
+## Phase 8 controlled field entry
+
+Phase 8 provides a local, mock-adapter-only field-entry session after a package
+is **Approved for manual next step**. It never opens a browser or external
+application. It records controlled local population status only, after which a
+human must manually review the target context.
+
+Sessions and LangGraph checkpoints contain opaque workspace, profile, evidence,
+material-version, and workflow references; identifiers; classifications;
+revisions; statuses; and sanitized counts only. A trusted, externally configured
+`workspace_id -> approved root` mapping resolves opaque private-registry records
+locally. Registry entries contain only an opaque ID, workspace binding, kind,
+relative path, and SHA-256 digest. Resolution rejects malformed references,
+wrong kinds or workspaces, missing files, directories and other non-regular
+files, symlinks, containment escapes, and digest mismatches. Resolved paths and
+field values are transient and never enter dashboard models, sessions,
+checkpoints, audit events, errors, or logs.
+
+Eligible identifiers are limited to verified profile/application data for a full
+name, approved email or telephone, explicitly mapped professional links, and
+only other allow-listed categories when an exact deterministic mapping exists.
+The current profile schema leaves ambiguous location, employment, education,
+and skill aggregates manual until an exact field-level mapping is available.
+Passwords, authentication, CAPTCHA/MFA, payments, legal declarations, sensitive
+or demographic questions, work authorization, compensation, references,
+free-text answers, and attachments always remain manual.
+
+Every session preparation, start confirmation, and population confirmation
+reloads authoritative artifacts and reruns approval, Phase 7 quality, revision,
+material-version, workflow-checkpoint, evidence, and profile-completeness gates.
+Two deliberate confirmations are required: first for the prepared session, then
+for the exact selected eligible field identifiers. Cancellation and skips are
+explicit, safe, and idempotent. Local reference-only snapshots use atomic writes;
+sanitized audit events are append-only and idempotent.
+
+The dashboard is read-only by default. It shows sanitized session metadata,
+counts, classifications, compatibility indicators, the last fresh quality
+outcome, and interruption stage. Rendering and refresh do not create, resolve,
+validate, migrate, confirm, populate, skip, cancel, or advance a session.
+An explicitly injected trusted local session service is required before the
+deliberate controls are available; the dashboard never infers or creates that
+configuration. Controls always re-enter the controller-backed LangGraph flow.
+
+Only fictional offline adapters and fixtures are supplied. There is no browser
+adapter, HTTP/API action, upload, download, email, authentication, CAPTCHA/MFA,
+payment, consent, Apply, Send, or Submit capability. Population never means an
+application was submitted.
+
 ### Lint
 
 ```powershell
@@ -521,9 +569,6 @@ It must not:
 
 ## Planned development
 
-- LangGraph workflow orchestration.
-- Additional quality-control and approval commands.
-- Controlled application-field autofill after explicit approval.
 - Expanded audit logging and review visibility.
 
 Any future autofill capability must remain human-supervised and must not introduce automatic submission.

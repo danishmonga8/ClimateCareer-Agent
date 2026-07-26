@@ -59,6 +59,23 @@ class ArtifactReferences(StrictModel):
     discovery_snapshot: str = Field(min_length=1)
     scoring_result: str | None = None
     personalized_application: str | None = None
+    profile_artifact_ref: str | None = None
+    evidence_artifact_refs: list[str] = Field(default_factory=list)
+
+    @field_validator("profile_artifact_ref", "evidence_artifact_refs", mode="before")
+    @classmethod
+    def require_opaque_reference(cls, value):
+        values = value if isinstance(value, list) else [value]
+        for item in values:
+            if item is not None and (
+                "/" in item
+                or "\\" in item
+                or item in {".", ".."}
+                or ".." in item
+                or (len(item) > 1 and item[0].isalpha() and item[1] == ":")
+            ):
+                raise ValueError("Artifact references must be opaque logical identifiers.")
+        return value
 
     @field_validator("discovery_snapshot", "scoring_result", "personalized_application")
     @classmethod

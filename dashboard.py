@@ -19,6 +19,10 @@ from app.models.dashboard_review import (
     DashboardReviewStatus,
     DashboardWorkspace,
 )
+from app.services.autofill_dashboard_service import (
+    AutofillDashboardError,
+    AutofillDashboardService,
+)
 from app.services.dashboard_repository import (
     DashboardStorageError,
     save_dashboard_workspace,
@@ -251,6 +255,146 @@ def _render_controls(workspace_path: Path, view: DashboardJobView) -> None:
         _confirm_decision(workspace_path, view, DashboardReviewAction.REJECTED)
 
 
+def _configured_autofill_service() -> AutofillDashboardService | None:
+    """Return an explicitly injected trusted service; rendering never configures one."""
+    service = st.session_state.get("_autofill_dashboard_service")
+    return service if isinstance(service, AutofillDashboardService) else None
+
+
+def _render_autofill_session(view: DashboardJobView) -> None:
+    """Render sanitized Phase 8 metadata; reads never resolve or mutate artifacts."""
+    st.subheader("Controlled field entry")
+    st.caption("Local only. Field entry never submits, sends, uploads, or contacts anyone.")
+    service = _configured_autofill_service()
+    if service is None:
+        st.info(
+            "No controlled field-entry session is configured. Dashboard rendering will not create one."
+        )
+        return
+    try:
+        session = service.read_view(view.record)
+    except AutofillDashboardError as error:
+        st.warning(str(error))
+        return
+    if session is None:
+        st.info(
+            "No prepared local field-entry session exists for this job. Refresh will not create one."
+        )
+        return
+    st.caption(
+        f"Session ID: {session.session_id} · Status: {session.status.value.replace('_', ' ')}"
+    )
+    st.caption(f"Stable job identifier: {session.job_key}")
+    st.caption(
+        "Revision compatibility: "
+        f"{'compatible' if session.revision_compatible else 'mismatch'} "
+        f"(expected {session.expected_revision}, current {session.current_revision})"
+    )
+    st.caption(
+        "Material-version compatibility: "
+        f"{'compatible' if session.material_version_compatible else 'mismatch'}"
+    )
+    st.caption(
+        "Artifact-reference compatibility: "
+        f"{'compatible' if session.artifact_references_compatible else 'mismatch'}"
+    )
+    quality = session.quality_status.value.upper() if session.quality_status else "UNAVAILABLE"
+    st.caption(f"Last fresh quality outcome: {quality} · warnings: {session.quality_warning_count}")
+    stage = (
+        session.workflow_stage.value.replace("_", " ") if session.workflow_stage else "unavailable"
+    )
+    st.caption(f"Workflow interruption stage: {stage}")
+    metrics = st.columns(4)
+    metrics[0].metric("Eligible", session.eligible_count)
+    metrics[1].metric("Manual", session.manual_count)
+    metrics[2].metric("Selected", session.selected_count)
+    metrics[3].metric("Prepared", session.prepared_count)
+    metrics = st.columns(4)
+    metrics[0].metric("Populated", session.populated_count)
+    metrics[1].metric("Skipped", session.skipped_count)
+    metrics[2].metric("Blocked", session.blocked_count)
+    metrics[3].metric("Fields", len(session.fields))
+    st.caption("Field identifiers and classifications")
+    for field in session.fields:
+        st.write(f"{field.identifier}: {field.classification.value}")
+    for code in session.blocking_codes:
+        st.warning(f"BLOCKED {code}")
+    for guidance in session.recovery_guidance:
+        st.caption(f"Recovery: {guidance}")
+    if session.status.value == "populated":
+        st.success("Prepared for manual field entry.")
+        return
+    if session.status.value == "cancelled":
+        st.info("This local field-entry session was cancelled safely.")
+        return
+    can_start = not session.blocking_codes and session.status.value == "awaiting_start_confirmation"
+    can_populate = (
+        not session.blocking_codes and session.status.value == "awaiting_population_confirmation"
+    )
+    start_confirmed = st.checkbox(
+        "I confirm this specific prepared local session",
+        key=f"autofill-start-confirm-{session.session_id}",
+    )
+    if st.button(
+        "Confirm prepared session",
+        key=f"autofill-start-{session.session_id}",
+        disabled=not can_start or not start_confirmed,
+    ):
+        try:
+            service.confirm_start(session)
+        except AutofillDashboardError as error:
+            st.error(str(error))
+        else:
+            st.rerun()
+    selection_confirmed = st.checkbox(
+        "I confirm these exact selected eligible field identifiers",
+        key=f"autofill-fields-confirm-{session.session_id}",
+    )
+    if st.button(
+        "Confirm exact selected fields",
+        key=f"autofill-populate-{session.session_id}",
+        disabled=not can_populate or not selection_confirmed,
+    ):
+        try:
+            service.confirm_population(session)
+        except AutofillDashboardError as error:
+            st.error(str(error))
+        else:
+            st.rerun()
+    skipped = st.multiselect(
+        "Eligible fields to skip manually",
+        list(session.selected_identifiers),
+        key=f"autofill-skip-fields-{session.session_id}",
+        disabled=not can_populate,
+    )
+    if st.button(
+        "Skip selected fields",
+        key=f"autofill-skip-{session.session_id}",
+        disabled=not can_populate or not skipped,
+    ):
+        try:
+            service.skip(session, tuple(skipped))
+        except AutofillDashboardError as error:
+            st.error(str(error))
+        else:
+            st.rerun()
+    if st.button(
+        "Cancel local field-entry session",
+        key=f"autofill-cancel-{session.session_id}",
+        disabled=session.status.value
+        not in {
+            "awaiting_start_confirmation",
+            "awaiting_population_confirmation",
+        },
+    ):
+        try:
+            service.cancel(session)
+        except AutofillDashboardError as error:
+            st.error(str(error))
+        else:
+            st.rerun()
+
+
 def main() -> None:
     """Render the local-only review dashboard."""
     st.title("Human Approval Dashboard")
@@ -296,6 +440,7 @@ def main() -> None:
     with history:
         render_audit(data.workspace, selected.record.job_key)
     _render_controls(workspace_path, selected)
+    _render_autofill_session(selected)
 
 
 if __name__ == "__main__":
