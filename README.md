@@ -436,6 +436,16 @@ external-action route, browser action, upload, email, or autofill capability.
 
 ## Quality checks
 
+## Phase 7 quality control
+
+`review_cli.py quality-check` reports **PASS**, **WARNING**, or **BLOCKED** using
+sanitized finding codes and recovery guidance. PASS and WARNING exit `0`;
+BLOCKED exits `3`; invalid command input exits `2`. Internal approval now requires
+`--workspace`, `--job-key`, `--expected-revision`, `--reviewer-label`,
+`--confirm`, `--evidence`, and `--approval-note`; the former application-only
+approval invocation is intentionally unsupported. Approval remains only
+**Approved for manual next step** and never submits an application.
+
 ### Lint
 
 ```powershell

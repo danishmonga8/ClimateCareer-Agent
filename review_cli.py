@@ -5,19 +5,30 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from app.dashboard.data_loader import load_dashboard_data
+from app.models.dashboard_review import DashboardReviewAction
 from app.models.personalization import PersonalizedApplication
 from app.services.application_review_service import (
     ApplicationReviewError,
-    approve_application,
     begin_application_review,
     resolve_application_answer,
     resolve_review_item,
 )
+from app.services.dashboard_repository import save_updated_dashboard_workspace
+from app.services.dashboard_review_service import apply_dashboard_decision
 from app.services.personalization_repository import (
     ApplicationStorageError,
     load_personalized_application,
     save_personalized_application,
 )
+from app.services.quality_control_service import (
+    QualityControlError,
+    QualityStatus,
+    check_review_quality,
+)
+from app.workflows.orchestration import WorkflowOrchestrator
+from app.workflows.repository import find_workflow_for_job
+from app.workflows.state import WorkflowDecision
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,6 +47,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show the current application-review status.",
     )
     _add_application_argument(status_parser)
+
+    quality_parser = subparsers.add_parser(
+        "quality-check",
+        help="Run read-only, sanitized internal quality checks.",
+    )
+    quality_parser.add_argument("--workspace", required=True, type=Path)
+    quality_parser.add_argument("--job-key", required=True)
+    quality_parser.add_argument("--expected-revision", required=True, type=int)
+    quality_parser.add_argument("--evidence", required=True, type=Path)
+    quality_parser.add_argument("--workflow-checkpoints", type=Path)
 
     begin_parser = subparsers.add_parser(
         "begin",
@@ -83,14 +104,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     approve_parser = subparsers.add_parser(
         "approve",
-        help="Approve a fully reviewed application.",
+        help="Quality-gate and record internal approval for a manual next step.",
     )
-    _add_application_argument(approve_parser)
-    approve_parser.add_argument(
-        "--approval-note",
-        required=True,
-        help="Explicit user approval statement.",
-    )
+    approve_parser.add_argument("--workspace", required=True, type=Path)
+    approve_parser.add_argument("--job-key", required=True)
+    approve_parser.add_argument("--expected-revision", required=True, type=int)
+    approve_parser.add_argument("--reviewer-label", required=True)
+    approve_parser.add_argument("--confirm", action="store_true")
+    approve_parser.add_argument("--evidence", required=True, type=Path)
+    approve_parser.add_argument("--workflow-checkpoints", type=Path)
+    approve_parser.add_argument("--approval-note", required=True)
 
     return parser
 
@@ -111,13 +134,9 @@ def _print_status(
     application: PersonalizedApplication,
 ) -> None:
     """Print the current human-review status."""
-    unresolved_items = [
-        item for item in application.review_items if not item.resolved
-    ]
+    unresolved_items = [item for item in application.review_items if not item.resolved]
     unconfirmed_answers = [
-        answer
-        for answer in application.application_answers
-        if answer.requires_confirmation
+        answer for answer in application.application_answers if answer.requires_confirmation
     ]
 
     print(f"Candidate: {application.candidate_name}")
@@ -133,14 +152,21 @@ def _print_status(
 
     for index, answer in enumerate(application.application_answers):
         if answer.requires_confirmation:
-            print(
-                f"Question requiring confirmation [{index}]: "
-                f"{answer.question}"
-            )
+            print(f"Question requiring confirmation [{index}]: {answer.question}")
 
     for item in unresolved_items:
         print(f"Unresolved field: {item.field_path}")
         print(f"Reason: {item.reason}")
+
+
+def _print_quality_report(report) -> None:
+    """Print a deterministic report containing no artifact content or paths."""
+    print(f"Quality status: {report.status.value.upper()}")
+    print(f"Warnings: {report.warning_count}")
+    print(f"Blocking findings: {report.blocking_count}")
+    for finding in report.findings:
+        print(f"{finding.severity.value.upper()} {finding.code}: {finding.message}")
+        print(f"Recovery: {finding.recovery_guidance}")
 
 
 def _save_application(
@@ -161,6 +187,66 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        if args.command == "quality-check":
+            report = check_review_quality(
+                args.workspace,
+                args.job_key,
+                args.expected_revision,
+                evidence_path=args.evidence,
+                workflow_directory=args.workflow_checkpoints,
+            )
+            _print_quality_report(report)
+            return 3 if report.status == QualityStatus.BLOCKED else 0
+
+        if args.command == "approve":
+            if not args.confirm:
+                print("Approval requires --confirm.", file=sys.stderr)
+                return 2
+            report = check_review_quality(
+                args.workspace,
+                args.job_key,
+                args.expected_revision,
+                evidence_path=args.evidence,
+                workflow_directory=args.workflow_checkpoints,
+            )
+            _print_quality_report(report)
+            if report.status == QualityStatus.BLOCKED:
+                return 3
+            workflow = (
+                find_workflow_for_job(args.job_key, args.workflow_checkpoints)
+                if args.workflow_checkpoints
+                else None
+            )
+            if workflow is not None:
+                result = WorkflowOrchestrator(args.workflow_checkpoints).resume(
+                    workflow["workflow_id"],
+                    {
+                        "action": WorkflowDecision.APPROVE.value,
+                        "expected_revision": args.expected_revision,
+                        "reviewer_label": args.reviewer_label,
+                        "reason_or_note": args.approval_note,
+                    },
+                )
+                if result["stage"].value == "recoverable_failure":
+                    return 3
+            else:
+                data = load_dashboard_data(args.workspace)
+                linked = next(
+                    item.application for item in data.jobs if item.record.job_key == args.job_key
+                )
+                updated = apply_dashboard_decision(
+                    data.workspace,
+                    args.job_key,
+                    DashboardReviewAction.APPROVED,
+                    args.expected_revision,
+                    args.reviewer_label,
+                    args.approval_note,
+                    linked_application=linked,
+                )
+                save_updated_dashboard_workspace(data.workspace, updated, args.workspace)
+            print("Approved for manual next step. No application was submitted.")
+            return 0
+
         application = load_personalized_application(
             args.application,
         )
@@ -189,12 +275,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 resolution=args.resolution,
             )
 
-        elif args.command == "approve":
-            updated_application = approve_application(
-                application,
-                approval_note=args.approval_note,
-            )
-
         else:
             parser.error(f"Unsupported command: {args.command}")
             return 2
@@ -209,6 +289,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (
         ApplicationReviewError,
         ApplicationStorageError,
+        QualityControlError,
     ) as error:
         print(f"Application review failed: {error}", file=sys.stderr)
         return 1

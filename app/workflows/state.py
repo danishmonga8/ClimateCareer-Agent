@@ -13,6 +13,7 @@ class WorkflowStage(StrEnum):
     JOB_PROCESSING = "job_processing"
     SCORING = "scoring"
     PERSONALIZATION = "personalization"
+    QUALITY_VALIDATION = "quality_validation"
     AWAITING_HUMAN_REVIEW = "awaiting_human_review"
     REVISION_REQUESTED = "revision_requested"
     APPROVED_FOR_MANUAL_NEXT_STEP = "approved_for_manual_next_step"

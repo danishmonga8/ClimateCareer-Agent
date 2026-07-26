@@ -23,6 +23,7 @@ from app.services.personalization_repository import (
     save_personalized_application,
 )
 from app.services.profile_service import load_candidate_profile
+from app.services.quality_control_service import QualityStatus, check_review_quality
 from app.services.scoring_repository import load_scoring_result
 from app.workflows.repository import load_workflow_checkpoint, save_workflow_checkpoint
 from app.workflows.state import (
@@ -169,6 +170,16 @@ class WorkflowOrchestrator:
             WorkflowDecision.REJECT,
         }:
             return self._recoverable(state, "This decision cannot be processed at human review.")
+        if action == WorkflowDecision.APPROVE:
+            report = check_review_quality(
+                state["workspace_reference"],
+                state["job_key"],
+                expected_revision,
+                evidence_path=state["evidence_reference"],
+                workflow_directory=self.checkpoint_directory,
+            )
+            if report.status == QualityStatus.BLOCKED:
+                return self._recoverable(state, "Quality checks blocked this internal approval.")
         try:
             data = load_dashboard_data(state["workspace_reference"])
             record = next(

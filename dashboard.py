@@ -29,6 +29,7 @@ from app.services.dashboard_review_service import (
     apply_dashboard_decision,
     resubmit_for_review,
 )
+from app.services.quality_control_service import QualityStatus, check_review_quality
 from app.workflows.orchestration import WorkflowOrchestrationError, WorkflowOrchestrator
 from app.workflows.repository import find_workflow_for_job
 from app.workflows.state import WorkflowDecision
@@ -45,7 +46,9 @@ def _workspace_input() -> Path:
             help="This local file references existing private artifacts.",
         )
         reviewer = st.text_input("Reviewer label", value="Local reviewer")
+        evidence = st.text_input("Evidence bank JSON", value="documents/private/evidence_bank.json")
         st.session_state["reviewer_label"] = reviewer
+        st.session_state["evidence_path"] = evidence
     return Path(value)
 
 
@@ -137,6 +140,17 @@ def _confirm_decision(
     if st.button(label, type="primary", disabled=not confirmed):
         try:
             checkpoint_directory = workspace_path.parent / "workflow_checkpoints"
+            quality = check_review_quality(
+                workspace_path,
+                view.record.job_key,
+                view.record.revision,
+                evidence_path=st.session_state.get("evidence_path"),
+                workflow_directory=checkpoint_directory
+                if find_workflow_for_job(view.record.job_key, checkpoint_directory)
+                else None,
+            )
+            if quality.status == QualityStatus.BLOCKED:
+                raise DashboardReviewError("Quality checks blocked this internal approval.")
             workflow = find_workflow_for_job(view.record.job_key, checkpoint_directory)
             if workflow is not None:
                 workflow_action = (
@@ -200,6 +214,18 @@ def _render_controls(workspace_path: Path, view: DashboardJobView) -> None:
         view.record.job_key,
         workspace_path.parent / "workflow_checkpoints",
     )
+    quality = check_review_quality(
+        workspace_path,
+        view.record.job_key,
+        view.record.revision,
+        evidence_path=st.session_state.get("evidence_path"),
+        workflow_directory=workspace_path.parent / "workflow_checkpoints" if workflow else None,
+    )
+    st.caption(
+        f"Quality status: {quality.status.value.upper()} · warnings: {quality.warning_count} · blocked: {quality.blocking_count}"
+    )
+    for finding in quality.findings:
+        st.write(f"{finding.severity.value.upper()} {finding.code}: {finding.recovery_guidance}")
     if workflow is not None:
         st.caption(f"Workflow stage: {workflow['stage'].value.replace('_', ' ')}")
         if workflow["stage"].value == "recoverable_failure":

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from app.models.evidence import EvidenceRecord, EvidenceStatus
 from app.models.personalization import (
     ApplicationClaim,
@@ -61,9 +63,7 @@ def make_application(
             ApplicationQuestionAnswer(
                 question="What is your expected salary?",
                 requires_confirmation=True,
-                confirmation_reason=(
-                    "The candidate must confirm the expected salary."
-                ),
+                confirmation_reason=("The candidate must confirm the expected salary."),
             )
         )
         review_items.append(
@@ -206,9 +206,7 @@ def test_resolve_answer_command_confirms_answer(
     review_item = saved_application.review_items[0]
 
     assert exit_code == 0
-    assert answer.answer == (
-        "My expected annual salary is INR 12,00,000."
-    )
+    assert answer.answer == ("My expected annual salary is INR 12,00,000.")
     assert answer.requires_confirmation is False
     assert review_item.resolved is True
 
@@ -256,7 +254,7 @@ def test_resolve_item_command_resolves_general_item(
     )
 
 
-def test_approve_command_persists_user_approval(
+def test_legacy_application_only_approve_invocation_is_rejected(
     tmp_path: Path,
 ) -> None:
     """The approve command should persist explicit approval."""
@@ -276,31 +274,12 @@ def test_approve_command_persists_user_approval(
         == 0
     )
 
-    exit_code = main(
-        [
-            "approve",
-            "--application",
-            str(application_path),
-            "--approval-note",
-            "I reviewed and approved all application content.",
-        ]
-    )
-
-    saved_application = load_personalized_application(
-        application_path,
-    )
-
-    assert exit_code == 0
-    assert (
-        saved_application.status
-        == ApplicationStatus.APPROVED_BY_USER
-    )
-    assert saved_application.user_approval_note == (
-        "I reviewed and approved all application content."
-    )
+    with pytest.raises(SystemExit, match="2"):
+        main(["approve", "--application", str(application_path), "--approval-note", "Approved."])
+    assert load_personalized_application(application_path).status == ApplicationStatus.NEEDS_REVIEW
 
 
-def test_unresolved_items_block_approval(
+def test_legacy_approve_cannot_bypass_unresolved_items(
     tmp_path: Path,
     capsys,
 ) -> None:
@@ -321,24 +300,9 @@ def test_unresolved_items_block_approval(
         == 0
     )
 
-    exit_code = main(
-        [
-            "approve",
-            "--application",
-            str(application_path),
-            "--approval-note",
-            "I approve this application.",
-        ]
-    )
-
-    error_output = capsys.readouterr().err
-    saved_application = load_personalized_application(
-        application_path,
-    )
-
-    assert exit_code == 1
-    assert "Application review failed" in error_output
-    assert saved_application.status == ApplicationStatus.NEEDS_REVIEW
+    with pytest.raises(SystemExit, match="2"):
+        main(["approve", "--application", str(application_path), "--approval-note", "Approved."])
+    assert load_personalized_application(application_path).status == ApplicationStatus.NEEDS_REVIEW
 
 
 def test_missing_application_returns_nonzero(
