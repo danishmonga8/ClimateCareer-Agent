@@ -40,9 +40,7 @@ def test_private_profile_and_evidence_bank_can_be_persisted(
         tmp_path / "evidence_bank.json",
     )
 
-    stored_evidence = json.loads(
-        evidence_path.read_text(encoding="utf-8")
-    )
+    stored_evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
 
     assert loaded_profile.full_name == "Sample Candidate"
     assert stored_evidence["candidate_name"] == "Sample Candidate"

@@ -1,7 +1,7 @@
 """Explainable job-relevance scoring using verified candidate evidence."""
 
-from datetime import date
 import json
+from datetime import UTC, datetime
 
 from openai import OpenAI, OpenAIError
 from pydantic import Field, ValidationError
@@ -101,35 +101,22 @@ def _create_scoring_payload(
     ]
 
     payload = {
-        "assessment_date": date.today().isoformat(),
+        "assessment_date": datetime.now(UTC).astimezone().date().isoformat(),
         "candidate": {
-            "education": [
-                record.model_dump(mode="json")
-                for record in profile.education
-            ],
-            "experience": [
-                record.model_dump(mode="json")
-                for record in profile.experience
-            ],
+            "education": [record.model_dump(mode="json") for record in profile.education],
+            "experience": [record.model_dump(mode="json") for record in profile.experience],
             "languages": profile.languages,
             "location": profile.contact.location,
             "preferences": profile.preferences.model_dump(mode="json"),
-            "work_authorization": (
-                profile.sensitive_information.work_authorization
-            ),
-            "visa_sponsorship_required": (
-                profile.sensitive_information.visa_sponsorship_required
-            ),
+            "work_authorization": (profile.sensitive_information.work_authorization),
+            "visa_sponsorship_required": (profile.sensitive_information.visa_sponsorship_required),
         },
         "verified_evidence": verified_evidence,
         "job": job.model_dump(
             mode="json",
             exclude={"raw_description"},
         ),
-        "required_categories": [
-            category.value
-            for category in ScoreCategory
-        ],
+        "required_categories": [category.value for category in ScoreCategory],
     }
 
     return json.dumps(payload, ensure_ascii=False)
@@ -149,11 +136,7 @@ def score_job_relevance(
     active_settings = settings or get_settings()
     active_client = client or create_openai_client(active_settings)
 
-    weights = (
-        WeightScheme.for_pure_ai_role()
-        if pure_ai_role
-        else WeightScheme()
-    )
+    weights = WeightScheme.for_pure_ai_role() if pure_ai_role else WeightScheme()
 
     try:
         response = active_client.responses.parse(
@@ -178,30 +161,21 @@ def score_job_relevance(
             text_format=ScoringExtractionResult,
         )
     except OpenAIError as error:
-        raise JobScoringError(
-            "The OpenAI API could not score the job."
-        ) from error
+        raise JobScoringError("The OpenAI API could not score the job.") from error
 
     extracted = response.output_parsed
 
     if extracted is None:
-        raise JobScoringError(
-            "The model returned no scoring assessment."
-        )
+        raise JobScoringError("The model returned no scoring assessment.")
 
-    received_categories = [
-        assessment.category
-        for assessment in extracted.category_assessments
-    ]
+    received_categories = [assessment.category for assessment in extracted.category_assessments]
     expected_categories = set(ScoreCategory)
 
     if (
         len(set(received_categories)) != len(received_categories)
         or set(received_categories) != expected_categories
     ):
-        raise JobScoringError(
-            "The model did not assess every scoring category exactly once."
-        )
+        raise JobScoringError("The model did not assess every scoring category exactly once.")
 
     weight_mapping = weights.as_mapping()
 
@@ -209,8 +183,7 @@ def score_job_relevance(
         ScoreComponent(
             category=assessment.category,
             awarded_points=round(
-                assessment.fit_ratio
-                * weight_mapping[assessment.category],
+                assessment.fit_ratio * weight_mapping[assessment.category],
                 2,
             ),
             maximum_points=weight_mapping[assessment.category],
@@ -230,13 +203,9 @@ def score_job_relevance(
             hard_constraints=extracted.hard_constraints,
             strongest_alignments=extracted.strongest_alignments,
             transferable_skills=extracted.transferable_skills,
-            recommended_resume_changes=(
-                extracted.recommended_resume_changes
-            ),
+            recommended_resume_changes=(extracted.recommended_resume_changes),
             uncertainty_notes=extracted.uncertainty_notes,
             confidence_score=extracted.confidence_score,
         )
     except (ValidationError, ValueError) as error:
-        raise JobScoringError(
-            "The scoring assessment failed local validation."
-        ) from error
+        raise JobScoringError("The scoring assessment failed local validation.") from error

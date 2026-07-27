@@ -83,7 +83,4 @@ def test_cv_wording_variations_are_matched() -> None:
     )
 
     assert len(bank.records) == 5
-    assert all(
-        record.status == EvidenceStatus.VERIFIED
-        for record in bank.records
-    )
+    assert all(record.status == EvidenceStatus.VERIFIED for record in bank.records)

@@ -16,7 +16,6 @@ from app.services.claim_verification import (
     verify_application_claims,
 )
 
-
 CLAIM_TEXT = "Developed environmental predictive models using Python"
 
 
@@ -125,10 +124,7 @@ def test_all_document_claims_are_verified() -> None:
 def test_capitalization_spacing_and_punctuation_are_accepted() -> None:
     """Safe formatting variations should not alter claim meaning."""
     application = make_application(
-        claim_text=(
-            "  DEVELOPED environmental predictive models "
-            "using Python!!!  "
-        )
+        claim_text=("  DEVELOPED environmental predictive models using Python!!!  ")
     )
 
     result = verify_application_claims(
@@ -141,9 +137,7 @@ def test_capitalization_spacing_and_punctuation_are_accepted() -> None:
 
 def test_unverified_paraphrase_is_rejected() -> None:
     """A semantic paraphrase must not pass strict verification."""
-    application = make_application(
-        claim_text="Built advanced climate AI systems with Python."
-    )
+    application = make_application(claim_text="Built advanced climate AI systems with Python.")
 
     with pytest.raises(
         ClaimVerificationError,
@@ -157,9 +151,7 @@ def test_unverified_paraphrase_is_rejected() -> None:
 
 def test_unknown_evidence_id_is_rejected() -> None:
     """Claims must not reference evidence outside the authoritative bank."""
-    unknown_record = make_verified_evidence().model_copy(
-        update={"evidence_id": "unknown-001"}
-    )
+    unknown_record = make_verified_evidence().model_copy(update={"evidence_id": "unknown-001"})
     application = make_application(evidence=[unknown_record])
 
     with pytest.raises(
@@ -217,9 +209,7 @@ def test_duplicate_authoritative_evidence_ids_are_rejected() -> None:
     ):
         verify_application_claims(
             application=make_application(evidence=[first_record]),
-            evidence_bank=make_evidence_bank(
-                [first_record, second_record]
-            ),
+            evidence_bank=make_evidence_bank([first_record, second_record]),
         )
 
 
@@ -231,7 +221,5 @@ def test_candidate_mismatch_is_rejected() -> None:
     ):
         verify_application_claims(
             application=make_application(),
-            evidence_bank=make_evidence_bank(
-                candidate_name="Different Candidate"
-            ),
+            evidence_bank=make_evidence_bank(candidate_name="Different Candidate"),
         )

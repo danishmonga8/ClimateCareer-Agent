@@ -74,9 +74,7 @@ def test_cli_builds_evidence_without_api_call(tmp_path: Path) -> None:
         ]
     )
 
-    stored_evidence = json.loads(
-        evidence_path.read_text(encoding="utf-8")
-    )
+    stored_evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
 
     assert exit_code == 0
     assert len(stored_evidence["records"]) == 1

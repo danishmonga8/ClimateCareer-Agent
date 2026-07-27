@@ -61,9 +61,7 @@ class CandidateExtractionResult(StrictModel):
     experience: list[ExperienceRecord] = Field(default_factory=list)
     projects: list[ExtractedProjectRecord] = Field(default_factory=list)
     publications: list[ExtractedPublicationRecord] = Field(default_factory=list)
-    certifications_and_awards: list[CertificationOrAward] = Field(
-        default_factory=list
-    )
+    certifications_and_awards: list[CertificationOrAward] = Field(default_factory=list)
     skills: list[SkillRecord] = Field(default_factory=list)
     languages: list[str] = Field(default_factory=list)
     preferences: CareerPreferences = Field(default_factory=CareerPreferences)
@@ -125,9 +123,7 @@ def extract_candidate_profile(
     extracted = response.output_parsed
 
     if extracted is None:
-        raise CandidateExtractionError(
-            "The model returned no validated candidate profile."
-        )
+        raise CandidateExtractionError("The model returned no validated candidate profile.")
 
     try:
         return CandidateProfile(
@@ -136,6 +132,4 @@ def extract_candidate_profile(
             source_document=source_document,
         )
     except ValidationError as error:
-        raise CandidateExtractionError(
-            "The extracted profile failed local validation."
-        ) from error
+        raise CandidateExtractionError("The extracted profile failed local validation.") from error

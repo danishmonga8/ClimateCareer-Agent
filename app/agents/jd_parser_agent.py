@@ -1,6 +1,6 @@
 """Job Description Parser Agent using OpenAI Structured Outputs."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 from openai import OpenAI, OpenAIError
 from pydantic import Field, ValidationError
@@ -88,9 +88,7 @@ def _parse_optional_date(
     try:
         return date.fromisoformat(value)
     except ValueError as error:
-        raise JobParsingError(
-            f"Invalid {field_name} returned by the parser: {value}"
-        ) from error
+        raise JobParsingError(f"Invalid {field_name} returned by the parser: {value}") from error
 
 
 def parse_job_description(
@@ -128,20 +126,14 @@ def parse_job_description(
             text_format=JobExtractionResult,
         )
     except OpenAIError as error:
-        raise JobParsingError(
-            "The OpenAI API could not parse the job description."
-        ) from error
+        raise JobParsingError("The OpenAI API could not parse the job description.") from error
 
     extracted = response.output_parsed
 
     if extracted is None:
-        raise JobParsingError(
-            "The model returned no validated job description."
-        )
+        raise JobParsingError("The model returned no validated job description.")
 
-    extracted_data = extracted.model_dump(
-        exclude={"date_posted", "application_deadline"}
-    )
+    extracted_data = extracted.model_dump(exclude={"date_posted", "application_deadline"})
 
     try:
         return JobDescription(
@@ -156,10 +148,8 @@ def parse_job_description(
                 extracted.application_deadline,
                 "application deadline",
             ),
-            discovery_date=discovery_date or date.today(),
+            discovery_date=discovery_date or datetime.now(UTC).astimezone().date(),
             raw_description=job_text,
         )
     except ValidationError as error:
-        raise JobParsingError(
-            "The extracted job description failed local validation."
-        ) from error
+        raise JobParsingError("The extracted job description failed local validation.") from error

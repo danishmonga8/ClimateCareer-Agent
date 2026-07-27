@@ -45,9 +45,7 @@ def _create_scoring_result() -> JobRelevanceScore:
         ],
         strongest_alignments=["Environmental data analysis"],
         transferable_skills=["Predictive modelling"],
-        recommended_resume_changes=[
-            "Emphasize verified environmental modelling work."
-        ],
+        recommended_resume_changes=["Emphasize verified environmental modelling work."],
         uncertainty_notes=["Commercial deployment is not verified."],
         confidence_score=0.9,
     )

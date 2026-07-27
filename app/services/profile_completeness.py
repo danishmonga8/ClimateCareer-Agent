@@ -70,11 +70,7 @@ def assess_profile_completeness(
             )
         )
 
-    current_education = [
-        record
-        for record in profile.education
-        if record.currently_enrolled
-    ]
+    current_education = [record for record in profile.education if record.currently_enrolled]
 
     if any(record.end_year is None for record in current_education):
         missing.append(
@@ -132,11 +128,7 @@ def assess_profile_completeness(
                 )
             )
 
-    identity_ready = bool(
-        profile.full_name
-        and profile.contact.emails
-        and profile.contact.location
-    )
+    identity_ready = bool(profile.full_name and profile.contact.emails and profile.contact.location)
 
     return ProfileCompletenessReport(
         missing_fields=missing,

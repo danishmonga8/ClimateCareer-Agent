@@ -23,10 +23,7 @@ def make_application() -> PersonalizedApplication:
             professional_headline="Environmental Data Scientist",
         ),
         cover_letter=TailoredCoverLetter(
-            body=(
-                "I am applying for the Environmental Data "
-                "Scientist position."
-            ),
+            body=("I am applying for the Environmental Data Scientist position."),
         ),
     )
 
@@ -61,9 +58,7 @@ def test_personalization_cli_saves_application(
     load_evidence = Mock(return_value=evidence_bank)
     load_job = Mock(return_value=job)
     personalize = Mock(return_value=application)
-    save_application = Mock(
-        return_value=output_path.resolve()
-    )
+    save_application = Mock(return_value=output_path.resolve())
 
     monkeypatch.setattr(
         personalization_cli,
@@ -143,9 +138,7 @@ def test_invalid_question_file_is_rejected(
         personalize,
     )
 
-    result = personalization_cli.main(
-        ["--questions", str(questions_path)]
-    )
+    result = personalization_cli.main(["--questions", str(questions_path)])
 
     assert result == 1
     personalize.assert_not_called()
@@ -171,11 +164,7 @@ def test_personalization_failure_returns_nonzero(
         Mock(return_value=object()),
     )
 
-    personalize = Mock(
-        side_effect=PersonalizationError(
-            "Candidate information does not match."
-        )
-    )
+    personalize = Mock(side_effect=PersonalizationError("Candidate information does not match."))
     save_application = Mock()
 
     monkeypatch.setattr(

@@ -36,34 +36,17 @@ class ApplicationClaim(StrictModel):
         """Allow only verified and appropriately permitted evidence."""
 
         if not self.evidence:
-            raise ValueError(
-                "Application claims require at least one evidence record."
-            )
+            raise ValueError("Application claims require at least one evidence record.")
 
         for record in self.evidence:
-            if (
-                record.status != EvidenceStatus.VERIFIED
-                or record.requires_confirmation
-            ):
-                raise ValueError(
-                    "Application claims may use only verified evidence."
-                )
+            if record.status != EvidenceStatus.VERIFIED or record.requires_confirmation:
+                raise ValueError("Application claims may use only verified evidence.")
 
-            if (
-                self.usage == ClaimUsage.RESUME
-                and not record.allowed_in_resume
-            ):
-                raise ValueError(
-                    "Evidence is not permitted for use in the resume."
-                )
+            if self.usage == ClaimUsage.RESUME and not record.allowed_in_resume:
+                raise ValueError("Evidence is not permitted for use in the resume.")
 
-            if (
-                self.usage == ClaimUsage.COVER_LETTER
-                and not record.allowed_in_cover_letter
-            ):
-                raise ValueError(
-                    "Evidence is not permitted for use in the cover letter."
-                )
+            if self.usage == ClaimUsage.COVER_LETTER and not record.allowed_in_cover_letter:
+                raise ValueError("Evidence is not permitted for use in the cover letter.")
 
         return self
 
@@ -81,9 +64,7 @@ class TailoredResume(StrictModel):
 
         for claim in self.claims:
             if claim.usage != ClaimUsage.RESUME:
-                raise ValueError(
-                    "Tailored resume claims must use the resume usage type."
-                )
+                raise ValueError("Tailored resume claims must use the resume usage type.")
 
         return self
 
@@ -102,9 +83,7 @@ class TailoredCoverLetter(StrictModel):
 
         for claim in self.claims:
             if claim.usage != ClaimUsage.COVER_LETTER:
-                raise ValueError(
-                    "Cover-letter claims must use the cover-letter usage type."
-                )
+                raise ValueError("Cover-letter claims must use the cover-letter usage type.")
 
         return self
 
@@ -125,20 +104,15 @@ class ApplicationQuestionAnswer(StrictModel):
         """Ensure uncertain or missing answers remain under human review."""
 
         if self.requires_confirmation and not self.confirmation_reason:
-            raise ValueError(
-                "An answer requiring confirmation must explain why."
-            )
+            raise ValueError("An answer requiring confirmation must explain why.")
 
         if not self.requires_confirmation and self.answer is None:
-            raise ValueError(
-                "A confirmed application answer cannot be empty."
-            )
+            raise ValueError("A confirmed application answer cannot be empty.")
 
         for claim in self.claims:
             if claim.usage != ClaimUsage.APPLICATION_ANSWER:
                 raise ValueError(
-                    "Application-answer claims must use the "
-                    "application-answer usage type."
+                    "Application-answer claims must use the application-answer usage type."
                 )
 
         return self
@@ -157,9 +131,7 @@ class ReviewItem(StrictModel):
         """Require a recorded resolution for completed review items."""
 
         if self.resolved and not self.resolution:
-            raise ValueError(
-                "A resolved review item must record its resolution."
-            )
+            raise ValueError("A resolved review item must record its resolution.")
 
         return self
 
@@ -174,9 +146,7 @@ class PersonalizedApplication(StrictModel):
 
     resume: TailoredResume
     cover_letter: TailoredCoverLetter
-    application_answers: list[ApplicationQuestionAnswer] = Field(
-        default_factory=list
-    )
+    application_answers: list[ApplicationQuestionAnswer] = Field(default_factory=list)
     review_items: list[ReviewItem] = Field(default_factory=list)
 
     status: ApplicationStatus = ApplicationStatus.DRAFT
@@ -190,23 +160,15 @@ class PersonalizedApplication(StrictModel):
         """Block approval while any information still needs review."""
 
         if self.status == ApplicationStatus.APPROVED_BY_USER:
-            has_unresolved_review = any(
-                not item.resolved for item in self.review_items
-            )
+            has_unresolved_review = any(not item.resolved for item in self.review_items)
             has_unconfirmed_answer = any(
-                answer.requires_confirmation
-                for answer in self.application_answers
+                answer.requires_confirmation for answer in self.application_answers
             )
 
             if has_unresolved_review or has_unconfirmed_answer:
-                raise ValueError(
-                    "Application cannot be approved while review "
-                    "items remain."
-                )
+                raise ValueError("Application cannot be approved while review items remain.")
 
             if not self.user_approval_note:
-                raise ValueError(
-                    "User approval note is required before approval."
-                )
+                raise ValueError("User approval note is required before approval.")
 
         return self

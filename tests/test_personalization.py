@@ -199,7 +199,5 @@ def test_confirmed_application_can_be_approved() -> None:
 def test_phase_two_has_no_submission_state() -> None:
     """Phase 2 must not contain an application-submission state."""
 
-    assert "submitted" not in {
-        status.value for status in ApplicationStatus
-    }
+    assert "submitted" not in {status.value for status in ApplicationStatus}
     assert not hasattr(PersonalizedApplication, "submit")

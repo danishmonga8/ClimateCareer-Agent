@@ -79,11 +79,7 @@ class SalaryInformation(StrictModel):
     @model_validator(mode="after")
     def validate_salary_range(self) -> "SalaryInformation":
         """Ensure that a stated salary range is logically valid."""
-        if (
-            self.minimum is not None
-            and self.maximum is not None
-            and self.minimum > self.maximum
-        ):
+        if self.minimum is not None and self.maximum is not None and self.minimum > self.maximum:
             raise ValueError("Minimum salary cannot exceed maximum salary.")
         return self
 

@@ -41,16 +41,13 @@ class EvidenceRecord(StrictModel):
     @model_validator(mode="after")
     def enforce_safe_usage(self) -> "EvidenceRecord":
         """Prevent unverified claims from being used in applications."""
-        if self.status != EvidenceStatus.VERIFIED:
-            if self.allowed_in_resume or self.allowed_in_cover_letter:
-                raise ValueError(
-                    "Unverified evidence cannot be used in application documents."
-                )
+        if self.status != EvidenceStatus.VERIFIED and (
+            self.allowed_in_resume or self.allowed_in_cover_letter
+        ):
+            raise ValueError("Unverified evidence cannot be used in application documents.")
 
         if self.status == EvidenceStatus.VERIFIED and self.requires_confirmation:
-            raise ValueError(
-                "Verified evidence cannot remain marked for confirmation."
-            )
+            raise ValueError("Verified evidence cannot remain marked for confirmation.")
 
         return self
 
@@ -62,7 +59,5 @@ class EvidenceBank(StrictModel):
     source_document: str = Field(min_length=1)
     source_sha256: str = Field(min_length=64, max_length=64)
     records: list[EvidenceRecord] = Field(default_factory=list)
-    generated_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC)
-    )
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     schema_version: str = "1.0"

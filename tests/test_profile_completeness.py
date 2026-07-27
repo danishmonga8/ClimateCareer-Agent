@@ -16,10 +16,7 @@ def test_sensitive_application_fields_are_never_assumed() -> None:
     )
 
     report = assess_profile_completeness(profile)
-    missing_paths = {
-        field.field_path
-        for field in report.missing_fields
-    }
+    missing_paths = {field.field_path for field in report.missing_fields}
 
     assert report.identity_information_ready is True
     assert report.requires_manual_input is True

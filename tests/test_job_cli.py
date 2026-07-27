@@ -44,9 +44,7 @@ def test_job_cli_saves_mocked_structured_job(tmp_path: Path) -> None:
             ]
         )
 
-    stored_job = json.loads(
-        output_file.read_text(encoding="utf-8")
-    )
+    stored_job = json.loads(output_file.read_text(encoding="utf-8"))
 
     assert exit_code == 0
     assert stored_job["company"] == "Sample Company"

@@ -27,11 +27,7 @@ class ClaimVerificationResult(StrictModel):
 
 def _normalize_claim_text(value: str) -> str:
     """Ignore only capitalization, spacing, and punctuation differences."""
-    return "".join(
-        character
-        for character in value.casefold()
-        if character.isalnum()
-    )
+    return "".join(character for character in value.casefold() if character.isalnum())
 
 
 def _index_authoritative_evidence(
@@ -43,8 +39,7 @@ def _index_authoritative_evidence(
     for record in evidence_bank.records:
         if record.evidence_id in records_by_id:
             raise ClaimVerificationError(
-                "Evidence bank contains duplicate evidence ID: "
-                f"{record.evidence_id}"
+                f"Evidence bank contains duplicate evidence ID: {record.evidence_id}"
             )
 
         records_by_id[record.evidence_id] = record
@@ -69,8 +64,7 @@ def _iter_application_claims(
     for answer_index, answer in enumerate(application.application_answers):
         for claim_index, claim in enumerate(answer.claims):
             yield (
-                "application_answers"
-                f"[{answer_index}].claims[{claim_index}]",
+                f"application_answers[{answer_index}].claims[{claim_index}]",
                 claim,
                 ClaimUsage.APPLICATION_ANSWER,
             )
@@ -85,9 +79,7 @@ def _verify_claim(
 ) -> list[str]:
     """Verify one claim against authoritative evidence records."""
     if claim.usage != expected_usage:
-        raise ClaimVerificationError(
-            f"{field_path} has an incorrect claim usage."
-        )
+        raise ClaimVerificationError(f"{field_path} has an incorrect claim usage.")
 
     referenced_ids: list[str] = []
     referenced_records: list[EvidenceRecord] = []
@@ -98,8 +90,7 @@ def _verify_claim(
 
         if evidence_id in seen_ids:
             raise ClaimVerificationError(
-                f"{field_path} contains duplicate evidence ID: "
-                f"{evidence_id}"
+                f"{field_path} contains duplicate evidence ID: {evidence_id}"
             )
 
         seen_ids.add(evidence_id)
@@ -108,14 +99,12 @@ def _verify_claim(
 
         if authoritative_record is None:
             raise ClaimVerificationError(
-                f"{field_path} references unknown evidence ID: "
-                f"{evidence_id}"
+                f"{field_path} references unknown evidence ID: {evidence_id}"
             )
 
         if supplied_record != authoritative_record:
             raise ClaimVerificationError(
-                f"{field_path} contains a modified evidence record: "
-                f"{evidence_id}"
+                f"{field_path} contains a modified evidence record: {evidence_id}"
             )
 
         if (
@@ -123,8 +112,7 @@ def _verify_claim(
             or authoritative_record.requires_confirmation
         ):
             raise ClaimVerificationError(
-                f"{field_path} references unverified evidence: "
-                f"{evidence_id}"
+                f"{field_path} references unverified evidence: {evidence_id}"
             )
 
         referenced_ids.append(evidence_id)
@@ -133,14 +121,12 @@ def _verify_claim(
     normalized_claim = _normalize_claim_text(claim.text)
 
     has_exact_support = any(
-        normalized_claim == _normalize_claim_text(record.claim)
-        for record in referenced_records
+        normalized_claim == _normalize_claim_text(record.claim) for record in referenced_records
     )
 
     if not has_exact_support:
         raise ClaimVerificationError(
-            f"{field_path} is not an exact normalized match for its "
-            "referenced evidence."
+            f"{field_path} is not an exact normalized match for its referenced evidence."
         )
 
     return referenced_ids
@@ -161,9 +147,7 @@ def verify_application_claims(
     verified_evidence_ids: list[str] = []
     seen_verified_ids: set[str] = set()
 
-    for field_path, claim, expected_usage in _iter_application_claims(
-        application
-    ):
+    for field_path, claim, expected_usage in _iter_application_claims(application):
         claim_evidence_ids = _verify_claim(
             field_path=field_path,
             claim=claim,

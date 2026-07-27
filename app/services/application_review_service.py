@@ -20,9 +20,7 @@ def _validated_application(
     try:
         return PersonalizedApplication.model_validate(payload)
     except ValidationError as error:
-        raise ApplicationReviewError(
-            f"Unable to {action} the personalized application."
-        ) from error
+        raise ApplicationReviewError(f"Unable to {action} the personalized application.") from error
 
 
 def _reject_approved_application(
@@ -30,9 +28,7 @@ def _reject_approved_application(
 ) -> None:
     """Prevent approved applications from being silently changed."""
     if application.status == ApplicationStatus.APPROVED_BY_USER:
-        raise ApplicationReviewError(
-            "An approved application cannot be modified."
-        )
+        raise ApplicationReviewError("An approved application cannot be modified.")
 
 
 def begin_application_review(
@@ -64,19 +60,12 @@ def resolve_application_answer(
     normalized_resolution = resolution.strip()
 
     if not normalized_answer:
-        raise ApplicationReviewError(
-            "A confirmed application answer cannot be empty."
-        )
+        raise ApplicationReviewError("A confirmed application answer cannot be empty.")
 
     if not normalized_resolution:
-        raise ApplicationReviewError(
-            "An answer resolution note cannot be empty."
-        )
+        raise ApplicationReviewError("An answer resolution note cannot be empty.")
 
-    if (
-        question_index < 0
-        or question_index >= len(application.application_answers)
-    ):
+    if question_index < 0 or question_index >= len(application.application_answers):
         raise ApplicationReviewError(
             f"Application-question index is out of range: {question_index}"
         )
@@ -84,9 +73,7 @@ def resolve_application_answer(
     selected_answer = application.application_answers[question_index]
 
     if not selected_answer.requires_confirmation:
-        raise ApplicationReviewError(
-            "The selected application answer is already confirmed."
-        )
+        raise ApplicationReviewError("The selected application answer is already confirmed.")
 
     field_path = f"application_answers[{question_index}].answer"
 
@@ -98,8 +85,7 @@ def resolve_application_answer(
 
     if len(matching_items) != 1:
         raise ApplicationReviewError(
-            "The application answer must have exactly one unresolved "
-            "review item."
+            "The application answer must have exactly one unresolved review item."
         )
 
     payload = application.model_dump(mode="python")
@@ -134,22 +120,14 @@ def resolve_review_item(
     normalized_resolution = resolution.strip()
 
     if not normalized_path:
-        raise ApplicationReviewError(
-            "A review-item field path cannot be empty."
-        )
+        raise ApplicationReviewError("A review-item field path cannot be empty.")
 
     if not normalized_resolution:
-        raise ApplicationReviewError(
-            "A review-item resolution cannot be empty."
-        )
+        raise ApplicationReviewError("A review-item resolution cannot be empty.")
 
-    if (
-        normalized_path.startswith("application_answers[")
-        and normalized_path.endswith("].answer")
-    ):
+    if normalized_path.startswith("application_answers[") and normalized_path.endswith("].answer"):
         raise ApplicationReviewError(
-            "Application-answer review items must be resolved with "
-            "resolve_application_answer."
+            "Application-answer review items must be resolved with resolve_application_answer."
         )
 
     matching_items = [
@@ -159,9 +137,7 @@ def resolve_review_item(
     ]
 
     if not matching_items:
-        raise ApplicationReviewError(
-            f"No unresolved review item was found: {normalized_path}"
-        )
+        raise ApplicationReviewError(f"No unresolved review item was found: {normalized_path}")
 
     if len(matching_items) > 1:
         raise ApplicationReviewError(
@@ -195,22 +171,13 @@ def approve_application(
     normalized_note = approval_note.strip()
 
     if not normalized_note:
-        raise ApplicationReviewError(
-            "A user approval note cannot be empty."
-        )
+        raise ApplicationReviewError("A user approval note cannot be empty.")
 
     if any(not item.resolved for item in application.review_items):
-        raise ApplicationReviewError(
-            "Application cannot be approved with unresolved review items."
-        )
+        raise ApplicationReviewError("Application cannot be approved with unresolved review items.")
 
-    if any(
-        answer.requires_confirmation
-        for answer in application.application_answers
-    ):
-        raise ApplicationReviewError(
-            "Application cannot be approved with unconfirmed answers."
-        )
+    if any(answer.requires_confirmation for answer in application.application_answers):
+        raise ApplicationReviewError("Application cannot be approved with unconfirmed answers.")
 
     payload = application.model_dump(mode="python")
     payload["status"] = ApplicationStatus.APPROVED_BY_USER

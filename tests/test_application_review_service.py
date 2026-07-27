@@ -123,9 +123,7 @@ def test_approved_application_cannot_reenter_review() -> None:
 
 def test_human_answer_resolves_confirmation_item() -> None:
     """A human answer should update both answer and review item."""
-    application = begin_application_review(
-        make_application(uncertain_answer=True)
-    )
+    application = begin_application_review(make_application(uncertain_answer=True))
 
     updated = resolve_application_answer(
         application,
@@ -141,9 +139,7 @@ def test_human_answer_resolves_confirmation_item() -> None:
     assert answer.requires_confirmation is False
     assert answer.confirmation_reason is None
     assert review_item.resolved is True
-    assert review_item.resolution == (
-        "Candidate directly confirmed the expected salary."
-    )
+    assert review_item.resolution == ("Candidate directly confirmed the expected salary.")
 
 
 def test_answer_requires_matching_review_item() -> None:
@@ -153,9 +149,7 @@ def test_answer_requires_matching_review_item() -> None:
         requires_confirmation=True,
         confirmation_reason="The candidate must confirm availability.",
     )
-    application = make_application().model_copy(
-        update={"application_answers": [answer]}
-    )
+    application = make_application().model_copy(update={"application_answers": [answer]})
 
     with pytest.raises(
         ApplicationReviewError,
@@ -175,9 +169,7 @@ def test_non_answer_review_item_can_be_resolved() -> None:
         field_path="resume.professional_summary",
         reason="The summary requires a final wording review.",
     )
-    application = begin_application_review(
-        make_application(review_items=[item])
-    )
+    application = begin_application_review(make_application(review_items=[item]))
 
     updated = resolve_review_item(
         application,
@@ -186,16 +178,12 @@ def test_non_answer_review_item_can_be_resolved() -> None:
     )
 
     assert updated.review_items[0].resolved is True
-    assert updated.review_items[0].resolution == (
-        "Candidate reviewed and accepted the wording."
-    )
+    assert updated.review_items[0].resolution == ("Candidate reviewed and accepted the wording.")
 
 
 def test_answer_item_requires_answer_resolution_function() -> None:
     """An answer item cannot be resolved without supplying its answer."""
-    application = begin_application_review(
-        make_application(uncertain_answer=True)
-    )
+    application = begin_application_review(make_application(uncertain_answer=True))
 
     with pytest.raises(
         ApplicationReviewError,
@@ -222,9 +210,7 @@ def test_draft_cannot_be_approved_directly() -> None:
 
 def test_unresolved_items_block_service_approval() -> None:
     """The service must reject approval while review remains incomplete."""
-    application = begin_application_review(
-        make_application(uncertain_answer=True)
-    )
+    application = begin_application_review(make_application(uncertain_answer=True))
 
     with pytest.raises(
         ApplicationReviewError,
@@ -238,9 +224,7 @@ def test_unresolved_items_block_service_approval() -> None:
 
 def test_reviewed_application_can_be_approved() -> None:
     """Completed human review can produce an approved application."""
-    application = begin_application_review(
-        make_application(uncertain_answer=True)
-    )
+    application = begin_application_review(make_application(uncertain_answer=True))
     resolved = resolve_application_answer(
         application,
         question_index=0,
@@ -254,7 +238,5 @@ def test_reviewed_application_can_be_approved() -> None:
     )
 
     assert approved.status == ApplicationStatus.APPROVED_BY_USER
-    assert approved.user_approval_note == (
-        "I reviewed and approved all application content."
-    )
+    assert approved.user_approval_note == ("I reviewed and approved all application content.")
     assert all(item.resolved for item in approved.review_items)

@@ -44,24 +44,16 @@ class ApplicationAnswerSelection(StrictModel):
         """Keep uncertain answers empty and under human review."""
         if self.requires_confirmation:
             if not self.confirmation_reason:
-                raise ValueError(
-                    "An answer requiring confirmation must explain why."
-                )
+                raise ValueError("An answer requiring confirmation must explain why.")
 
             if self.evidence_ids:
-                raise ValueError(
-                    "An unconfirmed answer cannot include evidence selections."
-                )
+                raise ValueError("An unconfirmed answer cannot include evidence selections.")
         else:
             if not self.evidence_ids:
-                raise ValueError(
-                    "A confirmed answer requires verified evidence."
-                )
+                raise ValueError("A confirmed answer requires verified evidence.")
 
             if self.confirmation_reason is not None:
-                raise ValueError(
-                    "A confirmed answer cannot retain a confirmation reason."
-                )
+                raise ValueError("A confirmed answer cannot retain a confirmation reason.")
 
         return self
 
@@ -71,9 +63,7 @@ class PersonalizationSelectionResult(StrictModel):
 
     resume_evidence_ids: list[str] = Field(default_factory=list)
     cover_letter_evidence_ids: list[str] = Field(default_factory=list)
-    application_answers: list[ApplicationAnswerSelection] = Field(
-        default_factory=list
-    )
+    application_answers: list[ApplicationAnswerSelection] = Field(default_factory=list)
 
 
 SYSTEM_INSTRUCTIONS = """
@@ -134,8 +124,7 @@ def _index_evidence(
     for record in evidence_bank.records:
         if record.evidence_id in records_by_id:
             raise PersonalizationError(
-                "Evidence bank contains duplicate evidence ID: "
-                f"{record.evidence_id}"
+                f"Evidence bank contains duplicate evidence ID: {record.evidence_id}"
             )
 
         records_by_id[record.evidence_id] = record
@@ -160,10 +149,7 @@ def _create_personalization_payload(
             "allowed_in_cover_letter": record.allowed_in_cover_letter,
         }
         for record in evidence_bank.records
-        if (
-            record.status == EvidenceStatus.VERIFIED
-            and not record.requires_confirmation
-        )
+        if (record.status == EvidenceStatus.VERIFIED and not record.requires_confirmation)
     ]
 
     payload = {
@@ -197,38 +183,24 @@ def _build_claims(
     for evidence_id in evidence_ids:
         if evidence_id in seen_ids:
             raise PersonalizationError(
-                f"Duplicate evidence ID selected for {usage.value}: "
-                f"{evidence_id}"
+                f"Duplicate evidence ID selected for {usage.value}: {evidence_id}"
             )
 
         seen_ids.add(evidence_id)
         record = authoritative_records.get(evidence_id)
 
         if record is None:
-            raise PersonalizationError(
-                f"Unknown evidence ID selected: {evidence_id}"
-            )
+            raise PersonalizationError(f"Unknown evidence ID selected: {evidence_id}")
 
-        if (
-            record.status != EvidenceStatus.VERIFIED
-            or record.requires_confirmation
-        ):
-            raise PersonalizationError(
-                f"Unverified evidence was selected: {evidence_id}"
-            )
+        if record.status != EvidenceStatus.VERIFIED or record.requires_confirmation:
+            raise PersonalizationError(f"Unverified evidence was selected: {evidence_id}")
 
         if usage == ClaimUsage.RESUME and not record.allowed_in_resume:
-            raise PersonalizationError(
-                f"Evidence is not allowed in the resume: {evidence_id}"
-            )
+            raise PersonalizationError(f"Evidence is not allowed in the resume: {evidence_id}")
 
-        if (
-            usage == ClaimUsage.COVER_LETTER
-            and not record.allowed_in_cover_letter
-        ):
+        if usage == ClaimUsage.COVER_LETTER and not record.allowed_in_cover_letter:
             raise PersonalizationError(
-                "Evidence is not allowed in the cover letter: "
-                f"{evidence_id}"
+                f"Evidence is not allowed in the cover letter: {evidence_id}"
             )
 
         claims.append(
@@ -246,10 +218,7 @@ def _requires_sensitive_confirmation(question: str) -> bool:
     """Identify questions that must remain under direct human control."""
     normalized_question = question.casefold()
 
-    return any(
-        term in normalized_question
-        for term in SENSITIVE_QUESTION_TERMS
-    )
+    return any(term in normalized_question for term in SENSITIVE_QUESTION_TERMS)
 
 
 def _validate_answer_selections(
@@ -283,20 +252,14 @@ def _build_cover_letter_body(
     claims: list[ApplicationClaim],
 ) -> str:
     """Build a restrained cover letter from verified claims."""
-    opening = (
-        f"Dear Hiring Team,\n\nI am applying for the {job.title} "
-        f"position at {job.company}."
-    )
+    opening = f"Dear Hiring Team,\n\nI am applying for the {job.title} position at {job.company}."
 
     evidence_text = " ".join(claim.text for claim in claims)
 
     if evidence_text:
         opening = f"{opening} {evidence_text}"
 
-    return (
-        f"{opening}\n\nThank you for considering my application.\n\n"
-        "Sincerely"
-    )
+    return f"{opening}\n\nThank you for considering my application.\n\nSincerely"
 
 
 def personalize_application(
@@ -312,9 +275,7 @@ def personalize_application(
     questions = application_questions or []
 
     if profile.full_name != evidence_bank.candidate_name:
-        raise PersonalizationError(
-            "Candidate profile does not match the evidence-bank candidate."
-        )
+        raise PersonalizationError("Candidate profile does not match the evidence-bank candidate.")
 
     authoritative_records = _index_evidence(evidence_bank)
     active_settings = settings or get_settings()
@@ -350,9 +311,7 @@ def personalize_application(
     extracted = response.output_parsed
 
     if extracted is None:
-        raise PersonalizationError(
-            "The model returned no personalization selections."
-        )
+        raise PersonalizationError("The model returned no personalization selections.")
 
     resume_claims = _build_claims(
         extracted.resume_evidence_ids,
@@ -376,13 +335,9 @@ def personalize_application(
     for question_index, question in enumerate(questions):
         selection = selections_by_index[question_index]
 
-        if (
-            _requires_sensitive_confirmation(question)
-            and not selection.requires_confirmation
-        ):
+        if _requires_sensitive_confirmation(question) and not selection.requires_confirmation:
             raise PersonalizationError(
-                "Sensitive application questions must require "
-                "human confirmation."
+                "Sensitive application questions must require human confirmation."
             )
 
         if selection.requires_confirmation:
@@ -397,12 +352,9 @@ def personalize_application(
             )
             review_items.append(
                 ReviewItem(
-                    field_path=(
-                        f"application_answers[{question_index}].answer"
-                    ),
-                    reason=selection.confirmation_reason or (
-                        "The answer requires user confirmation."
-                    ),
+                    field_path=(f"application_answers[{question_index}].answer"),
+                    reason=selection.confirmation_reason
+                    or ("The answer requires user confirmation."),
                 )
             )
             continue
@@ -415,19 +367,13 @@ def personalize_application(
         application_answers.append(
             ApplicationQuestionAnswer(
                 question=question,
-                answer=" ".join(
-                    claim.text for claim in answer_claims
-                ),
+                answer=" ".join(claim.text for claim in answer_claims),
                 claims=answer_claims,
                 requires_confirmation=False,
             )
         )
 
-    resume_summary = (
-        " ".join(claim.text for claim in resume_claims)
-        if resume_claims
-        else None
-    )
+    resume_summary = " ".join(claim.text for claim in resume_claims) if resume_claims else None
 
     try:
         application = PersonalizedApplication(

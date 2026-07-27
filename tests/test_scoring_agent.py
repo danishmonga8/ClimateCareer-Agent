@@ -75,7 +75,4 @@ def test_scoring_agent_applies_fixed_weights(monkeypatch) -> None:
     assert result.overall_score == 80
     assert result.recommendation == ApplicationRecommendation.APPLY
     assert len(result.components) == 8
-    assert sum(
-        component.maximum_points
-        for component in result.components
-    ) == 100
+    assert sum(component.maximum_points for component in result.components) == 100

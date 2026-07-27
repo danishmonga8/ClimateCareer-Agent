@@ -52,10 +52,7 @@ def make_application() -> PersonalizedApplication:
             claims=[resume_claim],
         ),
         cover_letter=TailoredCoverLetter(
-            body=(
-                "I am applying for the Environmental Data Scientist "
-                "position."
-            ),
+            body=("I am applying for the Environmental Data Scientist position."),
             claims=[cover_letter_claim],
         ),
     )
@@ -75,9 +72,7 @@ def test_personalized_application_round_trip(tmp_path) -> None:
     assert saved_path == output_path.resolve()
     assert loaded_application == application
     assert loaded_application.candidate_name == "Sample Candidate"
-    assert loaded_application.resume.claims[0].evidence[0].evidence_id == (
-        "evidence-001"
-    )
+    assert loaded_application.resume.claims[0].evidence[0].evidence_id == ("evidence-001")
 
 
 def test_non_json_storage_path_is_rejected(tmp_path) -> None:

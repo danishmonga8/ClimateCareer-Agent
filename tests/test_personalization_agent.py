@@ -18,7 +18,6 @@ from app.models.job import JobDescription
 from app.models.personalization import ApplicationStatus
 from app.services.claim_verification import verify_application_claims
 
-
 CLAIM_TEXT = "Developed environmental predictive models using Python"
 
 
@@ -115,9 +114,7 @@ def test_personalization_uses_authoritative_evidence(
         profile=make_profile(),
         evidence_bank=bank,
         job=make_job(),
-        application_questions=[
-            "Describe your relevant modelling experience."
-        ],
+        application_questions=["Describe your relevant modelling experience."],
         client=mock_client,
         settings=make_settings(monkeypatch),
     )
@@ -135,10 +132,7 @@ def test_personalization_uses_authoritative_evidence(
 
     call_arguments = mock_client.responses.parse.call_args.kwargs
     assert call_arguments["model"] == "gpt-5.6-luna"
-    assert (
-        call_arguments["text_format"]
-        is PersonalizationSelectionResult
-    )
+    assert call_arguments["text_format"] is PersonalizationSelectionResult
 
 
 def test_unknown_selected_evidence_is_rejected(monkeypatch) -> None:
@@ -198,9 +192,7 @@ def test_candidate_mismatch_is_rejected_before_api_call(
     ):
         personalize_application(
             profile=make_profile(),
-            evidence_bank=make_bank(
-                candidate_name="Different Candidate"
-            ),
+            evidence_bank=make_bank(candidate_name="Different Candidate"),
             job=make_job(),
             client=mock_client,
             settings=make_settings(monkeypatch),
@@ -216,9 +208,7 @@ def test_uncertain_answer_creates_review_item(monkeypatch) -> None:
             ApplicationAnswerSelection(
                 question_index=0,
                 requires_confirmation=True,
-                confirmation_reason=(
-                    "The candidate must provide the expected salary."
-                ),
+                confirmation_reason=("The candidate must provide the expected salary."),
             )
         ],
     )
@@ -299,9 +289,7 @@ def test_sensitive_question_cannot_be_auto_answered(
             profile=make_profile(),
             evidence_bank=make_bank(),
             job=make_job(),
-            application_questions=[
-                "Are you legally authorized to work in this country?"
-            ],
+            application_questions=["Are you legally authorized to work in this country?"],
             client=mock_client,
             settings=make_settings(monkeypatch),
         )

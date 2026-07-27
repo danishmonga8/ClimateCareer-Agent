@@ -159,10 +159,7 @@ class JobRelevanceScore(StrictModel):
     @property
     def recommendation(self) -> ApplicationRecommendation:
         """Calculate the recommendation while respecting hard failures."""
-        if any(
-            check.status == HardConstraintStatus.FAILED
-            for check in self.hard_constraints
-        ):
+        if any(check.status == HardConstraintStatus.FAILED for check in self.hard_constraints):
             return ApplicationRecommendation.DO_NOT_APPLY
 
         if any(

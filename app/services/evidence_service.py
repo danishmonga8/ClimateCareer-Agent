@@ -6,7 +6,6 @@ from hashlib import sha256
 from app.models.candidate import CandidateProfile, SkillCategory
 from app.models.evidence import EvidenceBank, EvidenceRecord, EvidenceStatus
 
-
 MATCHING_STOPWORDS = {
     "and",
     "or",
@@ -30,11 +29,7 @@ def _normalize_text(value: str) -> str:
 
 def _significant_tokens(value: str) -> set[str]:
     """Return meaningful tokens used for conservative phrase matching."""
-    return {
-        token
-        for token in _normalize_text(value).split()
-        if token not in MATCHING_STOPWORDS
-    }
+    return {token for token in _normalize_text(value).split() if token not in MATCHING_STOPWORDS}
 
 
 def _find_source_excerpt(query: str, cv_text: str) -> str | None:
@@ -44,17 +39,11 @@ def _find_source_excerpt(query: str, cv_text: str) -> str | None:
     if not query_tokens:
         return None
 
-    lines = [
-        line.strip()
-        for line in cv_text.splitlines()
-        if line.strip()
-    ]
+    lines = [line.strip() for line in cv_text.splitlines() if line.strip()]
 
     for start_index in range(len(lines)):
         for window_size in range(1, 4):
-            window = " ".join(
-                lines[start_index : start_index + window_size]
-            )
+            window = " ".join(lines[start_index : start_index + window_size])
 
             if query_tokens.issubset(_significant_tokens(window)):
                 return window[:500]
@@ -64,7 +53,7 @@ def _find_source_excerpt(query: str, cv_text: str) -> str | None:
 
 def _create_evidence_id(category: str, claim: str) -> str:
     """Create a stable evidence identifier without exposing the claim."""
-    digest = sha256(f"{category}:{claim}".encode("utf-8")).hexdigest()
+    digest = sha256(f"{category}:{claim}".encode()).hexdigest()
     return f"{category}-{digest[:12]}"
 
 
@@ -128,11 +117,7 @@ def _build_record(
 ) -> EvidenceRecord:
     """Create a safely classified evidence record."""
     is_verified = source_excerpt is not None
-    status = (
-        EvidenceStatus.VERIFIED
-        if is_verified
-        else EvidenceStatus.REQUIRES_CONFIRMATION
-    )
+    status = EvidenceStatus.VERIFIED if is_verified else EvidenceStatus.REQUIRES_CONFIRMATION
 
     return EvidenceRecord(
         evidence_id=_create_evidence_id(category, claim),
@@ -143,9 +128,7 @@ def _build_record(
         associated_project=associated_project,
         tools=tools or [],
         domain=domain,
-        quantitative_evidence=_extract_quantitative_evidence(
-            source_excerpt or ""
-        ),
+        quantitative_evidence=_extract_quantitative_evidence(source_excerpt or ""),
         suitable_job_families=suitable_job_families or [],
         confidence_score=0.98 if is_verified else 0.35,
         status=status,
