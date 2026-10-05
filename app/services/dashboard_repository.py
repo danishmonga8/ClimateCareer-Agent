@@ -36,7 +36,12 @@ def _atomic_write(workspace: DashboardWorkspace, path: Path) -> Path:
         temporary_path.write_text(workspace.model_dump_json(indent=2), encoding="utf-8")
         temporary_path.replace(path)
     except OSError as error:
-        temporary_path.unlink(missing_ok=True)
+        try:
+            temporary_path.unlink(missing_ok=True)
+        except OSError:
+            # The parent may itself be a file or otherwise inaccessible. The
+            # original storage failure remains the useful, sanitized error.
+            pass
         raise DashboardStorageError("Unable to save dashboard workspace.") from error
     return path
 

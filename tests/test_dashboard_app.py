@@ -263,6 +263,7 @@ def test_dashboard_autofill_view_is_read_only_until_deliberate_controls(
         if item.label == "I confirm this specific prepared local session"
     )
     checkbox.set_value(True)
+    app.run()
     next(item for item in app.button if item.label == "Confirm prepared session").click()
     app.run()
     assert calls == ["resolve", "resolve"]
