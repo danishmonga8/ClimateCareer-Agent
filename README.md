@@ -1,5 +1,9 @@
 ﻿# ClimateCareer-Agent
 
+[![CI](https://github.com/danishmonga8/ClimateCareer-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/danishmonga8/ClimateCareer-Agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+
 ClimateCareer-Agent is a human-supervised AI system for evaluating climate, environmental, sustainability, and AI-related job opportunities.
 
 It converts a candidate CV into structured, traceable evidence; parses job descriptions; calculates an explainable relevance score; and generates private recommendation and application-personalization outputs.
@@ -7,6 +11,9 @@ It converts a candidate CV into structured, traceable evidence; parses job descr
 The system does not submit applications automatically. Personalization, review,
 approval, controlled local field entry, and final application decisions remain
 under human control.
+
+> **Project status:** Local/offline v1 is complete and covered by automated
+> tests. External application submission is deliberately outside the project scope.
 
 ## Core principles
 
